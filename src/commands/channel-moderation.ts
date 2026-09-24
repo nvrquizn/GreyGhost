@@ -9,8 +9,8 @@ export const purgeCommand: Command = {
     .setDMPermission(false)
     .setDefaultMemberPermissions(PermissionFlagsBits.ManageMessages)
     .addIntegerOption((option) => option.setName("amount").setDescription("Messages to delete (1–100).").setMinValue(1).setMaxValue(100).setRequired(true))
-    .addUserOption((option) => option.setName("member").setDescription("Only delete messages from this member."))
-    .addStringOption((option) => option.setName("reason").setDescription("Why the messages are being removed.").setMaxLength(400).setRequired(true)),
+    .addStringOption((option) => option.setName("reason").setDescription("Why the messages are being removed.").setMaxLength(400).setRequired(true))
+    .addUserOption((option) => option.setName("member").setDescription("Only delete messages from this member.")),
   async execute(interaction) {
     if (!interaction.inCachedGuild()) return;
     if (!(await requireModerationSetup(interaction.guildId))) {

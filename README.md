@@ -1,13 +1,16 @@
 # Grey Ghost
 
 Grey Ghost is a custom all-purpose Discord bot for an ASOIAF community. The
-first build provides a safe, expandable slash-command foundation.
+current build supports both slash commands and role-aware `?` prefix commands.
 
 ## Current commands and features
 
 - `/ping` — checks whether Grey Ghost is online
 - `/help` — shows the available command roster
+- `?command` — runs the same command through the optional question-mark prefix
+- `?help` — shows only the public and staff commands the invoking member may use
 - `/about` — introduces Grey Ghost
+- `/testwelcome` or `?testwelcome` — safely previews the configured welcome message
 - `/setup onboarding` — configures the welcome channel, join/leave log, and
   automatic newcomer role
 - `/setup view` — displays the current server configuration
@@ -150,6 +153,28 @@ log channel. Ticket numbers and metadata are included in server backups.
 
 For DM modmail, enable **Message Content Intent** in the Discord Developer
 Portal under **Bot → Privileged Gateway Intents**.
+
+## Question-mark prefix commands
+
+Every slash command also accepts the `?` prefix. Subcommands follow the command
+name, mentions resolve to their Discord users, roles, or channels, and text
+containing spaces may be placed in quotation marks. For example:
+
+```text
+?profile view @member
+?housepoints standings
+?warn @member "Repeatedly posting scam links"
+?joust enter 3 destrier @House-Targaryen 1 1 0
+```
+
+Named options are also accepted as `name:value` or `--name value`, which is
+useful for commands containing several text fields. File options use attachments
+added to the invoking message. Responses that would be ephemeral when using a
+slash command are delivered through DM; Grey Ghost reacts with 📬 after delivery.
+
+Prefix commands enforce the same Discord permission and role-hierarchy checks
+as slash commands. `/help` and `?help` share one role-aware catalogue, hiding
+configuration and moderation commands from members who cannot use them.
 
 ## Moderation cases
 

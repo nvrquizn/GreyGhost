@@ -19,6 +19,7 @@ import { registerLoreInteractions } from "./directory/interactions.js";
 import { registerModmailEvents } from "./modmail/events.js";
 import { registerModmailInteractions } from "./modmail/interactions.js";
 import { registerQuizInteractions } from "./quizzes/runtime.js";
+import { registerPrefixCommands } from "./prefix/handler.js";
 
 const client = new Client({
   intents: [
@@ -41,6 +42,7 @@ registerLoreInteractions(client);
 registerModmailEvents(client);
 registerModmailInteractions(client);
 registerQuizInteractions(client);
+registerPrefixCommands(client);
 
 client.once(Events.ClientReady, (readyClient) => {
   readyClient.user.setActivity("the mists of Dragonstone", {

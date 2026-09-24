@@ -14,6 +14,16 @@ async function fetchTextChannel(client: Client, channelId?: string) {
   return channel?.isSendable() ? channel : undefined;
 }
 
+export async function sendWelcomeMessage(member: GuildMember, channelId?: string): Promise<boolean> {
+  const channel = await fetchTextChannel(member.client, channelId);
+  if (!channel) return false;
+  await channel.send({
+    content: `${member} has entered the gates of King's Landing.`,
+    allowedMentions: { users: [member.id] },
+  });
+  return true;
+}
+
 async function sendJoinLog(member: GuildMember, channelId?: string) {
   const channel = await fetchTextChannel(member.client, channelId);
   if (!channel) return;
@@ -66,17 +76,9 @@ export function registerMemberEvents(client: Client): void {
       });
     }
 
-    const welcomeChannel = await fetchTextChannel(client, settings.welcomeChannelId);
-    if (welcomeChannel) {
-      await welcomeChannel
-        .send({
-          content: `${member} has entered the gates of King's Landing.`,
-          allowedMentions: { users: [member.id] },
-        })
-        .catch((error) => {
-          console.error(`Could not send welcome in ${member.guild.id}:`, error);
-        });
-    }
+    await sendWelcomeMessage(member, settings.welcomeChannelId).catch((error) => {
+      console.error(`Could not send welcome in ${member.guild.id}:`, error);
+    });
 
     await sendJoinLog(member, settings.logChannelId).catch((error) => {
       console.error(`Could not send join log in ${member.guild.id}:`, error);

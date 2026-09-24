@@ -13,8 +13,13 @@ export const aboutCommand: Command = {
       .setDescription(
         "A quiet dragon with a rather noisy list of responsibilities. Grey Ghost is the server's custom guide, steward, herald, and keeper of the peace.",
       )
-      .addFields({ name: "Current stage", value: "First build." })
-      .setFooter({ text: "Named for the elusive wild dragon of Dragonstone" });
+      .addFields(
+        { name: "Current build", value: "**v0.15.1** · Jousting tournaments and question-mark commands" },
+        { name: "Duties", value: "Onboarding, self roles, profiles, collections, House Points, lore, suggestions, quizzes, jousts, modmail, moderation, statistics, and server records." },
+        { name: "Command styles", value: "Use either Discord slash commands or the `?` prefix. Try `/help` or `?help` for your role-aware command list." },
+      )
+      .setFooter({ text: "Named for the elusive wild dragon of Dragonstone" })
+      .setTimestamp();
 
     await interaction.reply({ embeds: [embed] });
   },

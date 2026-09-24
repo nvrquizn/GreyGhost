@@ -21,6 +21,7 @@ export function registerModmailEvents(client: Client): void {
     if (message.author.bot) return;
     try {
       if (message.inGuild()) {
+        if (message.content.trimStart().startsWith("?")) return;
         const ticket = await findTicketByChannel(message.guildId, message.channelId);
         if (!ticket) return;
         const config = (await getGuildSettings(message.guildId)).modmail;

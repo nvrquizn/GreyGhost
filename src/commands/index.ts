@@ -28,6 +28,7 @@ import { moderationCommand } from "./moderation.js";
 import { lockCommand, purgeCommand, slowmodeCommand, unlockCommand } from "./channel-moderation.js";
 import { quizCommand } from "./quiz.js";
 import { joustCommand } from "./joust.js";
+import { testWelcomeCommand } from "./testwelcome.js";
 
 export const commands: Command[] = [
   pingCommand,
@@ -60,6 +61,7 @@ export const commands: Command[] = [
   unlockCommand,
   quizCommand,
   joustCommand,
+  testWelcomeCommand,
 ];
 
 export const commandMap = new Map(
