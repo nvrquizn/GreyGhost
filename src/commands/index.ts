@@ -67,6 +67,7 @@ import { raceCommand } from "./race.js";
 import { huntCommand } from "./hunt.js";
 import { tavernCommand } from "./tavern.js";
 import { festivalCommand } from "./festival.js";
+import { houseChronicleCommand } from "./housechronicle.js";
 
 export const commands: Command[] = [
   pingCommand,
@@ -136,6 +137,7 @@ export const commands: Command[] = [
   huntCommand,
   tavernCommand,
   festivalCommand,
+  houseChronicleCommand,
 ];
 
 export const commandMap = new Map(

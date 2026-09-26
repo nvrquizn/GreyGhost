@@ -2,6 +2,7 @@ import { EmbedBuilder, MessageFlags, PermissionFlagsBits, SlashCommandBuilder } 
 import type { Command } from "../types/command.js";
 import {
   addChronicleEntry,
+  addHouseChronicleEntry,
   awardAchievement,
   endHouseSeason,
   getCurrentHouseSeason,
@@ -94,6 +95,11 @@ export const seasonCommand: Command = {
     for (const roleId of season.winnerRoleIds) {
       const role = interaction.guild.roles.cache.get(roleId);
       for (const member of role?.members.values() ?? []) await awardAchievement(interaction.guildId, member.id, "season-victor");
+      await addHouseChronicleEntry(interaction.guildId, {
+        houseRoleId: roleId, type: "season_victory", title: `${season.name} · House Season Victory`,
+        description: `<@&${roleId}> won House Season #${season.id} with **${highest}** points.`,
+        occurredAt: season.endedAt ?? Date.now(), relatedUserIds: [...(role?.members.keys() ?? [])], createdBy: interaction.user.id, sourceKey: `house-season:${season.id}:house:${roleId}`,
+      });
     }
     await publishChronicleEntry(interaction.guild, entry);
     const ranking = standings.length ? standings.map((standing, index) => `**${index + 1}.** <@&${standing.roleId}> — **${standing.points}**`).join("\n") : "No configured Houses.";

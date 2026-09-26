@@ -2,6 +2,7 @@ import { EmbedBuilder, MessageFlags, PermissionFlagsBits, SlashCommandBuilder, t
 import type { Command } from "../types/command.js";
 import {
   awardAchievement,
+  addHouseChronicleEntry,
   cancelHouseQuest,
   changeHousePoints,
   createHouseQuest,
@@ -117,6 +118,11 @@ export const houseQuestCommand: Command = {
         reason: `Completed House quest #${result.quest.id}: ${result.quest.title}`,
         memberId: credited?.id,
         staffId: interaction.user.id,
+      });
+      await addHouseChronicleEntry(interaction.guildId, {
+        houseRoleId: result.quest.houseRoleId, type: "quest_completed", title: `${result.quest.title} · Quest Completed`,
+        description: `<@&${result.quest.houseRoleId}> completed House quest **#${result.quest.id}** and earned **${result.quest.rewardPoints} House Points**.`,
+        occurredAt: result.quest.completedAt ?? Date.now(), relatedUserIds: credited ? [credited.id] : [], createdBy: interaction.user.id, sourceKey: `house-quest:${result.quest.id}:completed`,
       });
       void refreshStatsDashboard(interaction.guild).catch(() => undefined);
     }

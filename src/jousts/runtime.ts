@@ -12,6 +12,7 @@ import {
   type JoustMatch,
 } from "../services/guild-settings.js";
 import { refreshStatsDashboard } from "../stats/dashboard.js";
+import { recordHouseEventPodium } from "../housechronicles/runtime.js";
 import { applyJoustInjury, changeRenown } from "../economy/store.js";
 import { publishChronicleEntry } from "../chronicles/runtime.js";
 import { createJoustSpoilClaim } from "../combat/store.js";
@@ -150,6 +151,7 @@ export async function runJoustRound(guild: Guild, joustId: number, staffId: stri
     await Promise.all(podiumIds.map((userId, index) => changeRenown(guild.id, userId, [5, 3, 2][index] ?? 1).catch(() => undefined)));
     await Promise.all(Object.keys(result.joust.entrants).map((userId) => recordFestivalActivity(guild.id, userId, "joust").catch(() => undefined)));
     await Promise.all(podiumIds.map((userId, index) => awardFestivalPlacement(guild.id, userId, [8, 5, 3][index] ?? 1, [5, 3, 2][index] ?? 1).catch(() => undefined)));
+    await recordHouseEventPodium(guild, { eventType: "the joust", title: result.joust.title, podiumIds, sourceKey: `joust:${result.joust.id}` }).catch(() => undefined);
     const champions = result.joust.championIds.map((userId) => entrantLine(result.joust, userId)).join("\n");
     await channel.send({ embeds: [new EmbedBuilder()
       .setColor(0xd4af37)

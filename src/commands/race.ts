@@ -1,3 +1,4 @@
+import { recordHouseEventPodium } from "../housechronicles/runtime.js";
 import { EmbedBuilder, MessageFlags, PermissionFlagsBits, SlashCommandBuilder } from "discord.js";
 import type { Command } from "../types/command.js";
 import { shopItemMap, shopItems } from "../economy/catalogue.js";
@@ -92,6 +93,7 @@ export const raceCommand: Command = {
       await Promise.all(result.podiumIds.map((userId, index) => changeRenown(interaction.guildId, userId, [5, 3, 2][index] ?? 1).catch(() => undefined)));
       await Promise.all(Object.keys(result.race.entrants).map((userId) => recordFestivalActivity(interaction.guildId, userId, "race").catch(() => undefined)));
       await Promise.all(result.podiumIds.map((userId, index) => awardFestivalPlacement(interaction.guildId, userId, [8, 5, 3][index] ?? 1, [5, 3, 2][index] ?? 1).catch(() => undefined)));
+      await recordHouseEventPodium(interaction.guild, { eventType: "the horse race", title: result.race.title, podiumIds: result.podiumIds, sourceKey: `race:${raceId}` }).catch(() => undefined);
       const finishers = Object.values(result.race.entrants).filter((entry) => entry.place).sort((a, b) => a.place! - b.place!);
       const lines = await Promise.all(finishers.map(async (entry) => {
         const horse = await getHorseProfile(interaction.guildId, entry.userId, entry.mountId);

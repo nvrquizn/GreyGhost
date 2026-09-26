@@ -196,6 +196,23 @@ const housePointsSchema = z.object({
   transactions: z.array(housePointTransactionSchema).max(5000),
 });
 
+const houseChronicleEntrySchema = z.object({
+  id: z.number().int().positive(),
+  houseRoleId: z.string(),
+  type: z.enum(["season_victory", "quest_completed", "event_placement", "milestone", "manual"]),
+  title: z.string().min(1).max(120),
+  description: z.string().min(1).max(2000),
+  occurredAt: z.number().int().positive(),
+  relatedUserIds: z.array(z.string()).max(100).default([]),
+  createdBy: z.string().optional(),
+  sourceKey: z.string().max(160).optional(),
+});
+
+const houseChroniclesSchema = z.object({
+  nextEntryNumber: z.number().int().positive().default(1),
+  entries: z.record(z.string(), houseChronicleEntrySchema).default({}),
+});
+
 export const modmailTicketSchema = z.object({
   id: z.number().int().positive(),
   userId: z.string(),
@@ -453,6 +470,7 @@ export const guildSettingsSchema = z.object({
   houseQuests: houseQuestsSchema.optional(),
   memberAchievements: z.record(z.string(), z.array(achievementAwardSchema).max(100)).optional(),
   housePoints: housePointsSchema.optional(),
+  houseChronicles: houseChroniclesSchema.optional(),
   loreEntries: z.record(z.string(), loreEntrySchema).optional(),
   hiddenLoreEntryIds: z.array(z.string()).max(500).optional(),
   modmail: modmailSchema.optional(),
@@ -480,6 +498,7 @@ export type HouseQuestCategory = z.infer<typeof houseQuestCategorySchema>;
 export type AchievementAward = NonNullable<GuildSettings["memberAchievements"]>[string][number];
 export type HousePoints = NonNullable<GuildSettings["housePoints"]>;
 export type HousePointTransaction = HousePoints["transactions"][number];
+export type HouseChronicleEntry = NonNullable<GuildSettings["houseChronicles"]>["entries"][string];
 export type LoreEntry = z.infer<typeof loreEntrySchema>;
 export type LoreEntryType = z.infer<typeof loreEntryTypeSchema>;
 export type ModmailTicket = z.infer<typeof modmailTicketSchema>;
@@ -1328,6 +1347,39 @@ export async function changeHousePoints(
   if (insufficientPoints) throw new Error("INSUFFICIENT_HOUSE_POINTS");
   if (!result) throw new Error("HOUSE_POINTS_UPDATE_FAILED");
   return result;
+}
+
+export async function addHouseChronicleEntry(
+  guildId: string,
+  input: Omit<HouseChronicleEntry, "id">,
+): Promise<HouseChronicleEntry> {
+  let result: HouseChronicleEntry | undefined;
+  writeQueue = writeQueue.catch(() => undefined).then(async () => {
+    const settings = await loadSettings();
+    const guildSettings = settings[guildId] ?? {};
+    const state = guildSettings.houseChronicles ?? { nextEntryNumber: 1, entries: {} };
+    if (input.sourceKey) {
+      const existing = Object.values(state.entries).find((entry) => entry.sourceKey === input.sourceKey);
+      if (existing) { result = existing; return; }
+    }
+    const entry = houseChronicleEntrySchema.parse({ id: state.nextEntryNumber, ...input });
+    state.entries[String(entry.id)] = entry;
+    state.nextEntryNumber += 1;
+    guildSettings.houseChronicles = houseChroniclesSchema.parse(state);
+    settings[guildId] = guildSettings;
+    await saveSettings();
+    result = entry;
+  });
+  await writeQueue;
+  if (!result) throw new Error("HOUSE_CHRONICLE_WRITE_FAILED");
+  return result;
+}
+
+export async function getHouseChronicleEntries(guildId: string, houseRoleId?: string): Promise<HouseChronicleEntry[]> {
+  const settings = await getGuildSettings(guildId);
+  return Object.values(settings.houseChronicles?.entries ?? {})
+    .filter((entry) => !houseRoleId || entry.houseRoleId === houseRoleId)
+    .sort((a, b) => b.occurredAt - a.occurredAt || b.id - a.id);
 }
 
 export async function saveLoreEntry(guildId: string, entry: LoreEntry): Promise<LoreEntry> {

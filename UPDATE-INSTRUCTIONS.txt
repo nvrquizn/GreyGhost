@@ -1,4 +1,4 @@
-GREY GHOST v0.28.0 — SAFE REPLACEMENT
+GREY GHOST v0.29.0 — SAFE REPLACEMENT
 
 1. Keep your existing live/local files and folders:
    - .env
@@ -22,7 +22,7 @@ GREY GHOST v0.28.0 — SAFE REPLACEMENT
 
 5. If npm run check succeeds, commit and push:
    git add .
-   git commit -m "Release Grey Ghost v0.28.0"
+   git commit -m "Release Grey Ghost v0.29.0"
    git push
 
 Railway should redeploy after the push.

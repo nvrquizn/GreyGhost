@@ -1,3 +1,4 @@
+import { recordHouseEventPodium } from "../housechronicles/runtime.js";
 import { EmbedBuilder, MessageFlags, PermissionFlagsBits, SlashCommandBuilder } from "discord.js";
 import type { Command } from "../types/command.js";
 import { applyJoustInjury, grantCoins, changeRenown } from "../economy/store.js";
@@ -176,6 +177,7 @@ export const meleeCommand: Command = {
         await Promise.all(podiumIds.map((userId, index) => changeRenown(interaction.guildId, userId, [5, 3, 2][index] ?? 1).catch(() => undefined)));
         await Promise.all(Object.keys(result.melee.entrants).map((userId) => recordFestivalActivity(interaction.guildId, userId, "melee").catch(() => undefined)));
         await Promise.all(podiumIds.map((userId, index) => awardFestivalPlacement(interaction.guildId, userId, [8, 5, 3][index] ?? 1, [5, 3, 2][index] ?? 1).catch(() => undefined)));
+        await recordHouseEventPodium(interaction.guild, { eventType: "the grand melee", title: result.melee.title, podiumIds, sourceKey: `melee:${meleeId}` }).catch(() => undefined);
         embed.setColor(0xd4af37).addFields(
           { name: "Champion", value: `<@${championId}> wins **20 coins**, **5 bonus House Points**, and the **Grand Melee Champion** achievement.` },
           ...(prizeResult ? [{ name: "Prizes", value: finalizedPrizeText(prizeResult).slice(0, 1024) }] : []),

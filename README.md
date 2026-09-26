@@ -458,7 +458,7 @@ Grey Ghost includes no-wager tavern mini-games through `/tavern`: dice, darts, t
 
 Deleted-message server logging was also hardened in this release with recent-message snapshots and partial-message fallbacks.
 
-## v0.28.0 — Seasonal Festivals
+## v0.29.0 — Seasonal Festivals
 
 Grey Ghost can now host temporary server-wide festivals with `/festival`. Staff create and publish a named festival, while members join from the configured event chat, earn Festival Points through normal Realm activities, complete temporary objectives, collect Festival Tokens, and spend those tokens on permanent seasonal keepsakes.
 

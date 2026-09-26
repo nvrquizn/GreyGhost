@@ -1,3 +1,4 @@
+import { recordHouseEventPodium } from "../housechronicles/runtime.js";
 import { EmbedBuilder, MessageFlags, PermissionFlagsBits, SlashCommandBuilder } from "discord.js";
 import type { Command } from "../types/command.js";
 import { getGuildSettings } from "../services/guild-settings.js";
@@ -110,6 +111,7 @@ export const festivalCommand: Command = {
     }
     if(sub==="cancel"){await cancelFestival(interaction.guildId,id);await interaction.reply(`**${festival.name}** has been cancelled.`);return;}
     const result=await finishFestival(interaction.guildId,id); const prize=await finalizePrizePackage(interaction.guild,`festival:${id}`,result.podiumIds); await Promise.all(result.podiumIds.map((u,i)=>changeRenown(interaction.guildId,u,[10,7,5][i]??3).catch(()=>undefined)));
+    await recordHouseEventPodium(interaction.guild,{eventType:"the seasonal festival",title:result.festival.name,podiumIds:result.podiumIds,sourceKey:`festival:${id}`}).catch(()=>undefined);
     const target=result.festival.announcementChannelId?await interaction.guild.channels.fetch(result.festival.announcementChannelId):interaction.channel;
     if(target?.isSendable()) await target.send({embeds:[new EmbedBuilder().setColor(0xd4af37).setTitle(`${result.festival.name} · Festival Concluded`).setDescription(result.podiumIds.map((u,i)=>`${["🥇","🥈","🥉"][i]} <@${u}>`).join("\n")||"No ranked participants.").addFields(...(prize?[{name:"Prizes",value:finalizedPrizeText(prize).slice(0,1024)}]:[])).setFooter({text:"Festival Points and unspent tokens are now archived; purchased keepsakes remain."})]});
     await interaction.reply({content:`**${festival.name}** is complete.`,flags:MessageFlags.Ephemeral});
