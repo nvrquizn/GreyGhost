@@ -1,32 +1,24 @@
-GREY GHOST v0.20.0 — SAFE REPLACEMENT
+GREY GHOST v0.22.0 — SAFE REPLACEMENT
 
-This folder intentionally excludes: .env, data/, .git/, node_modules/, and dist/.
+1. Keep your existing live/local files and folders:
+   - .env
+   - data/
+   - .git/
+   - node_modules/
+   - dist/
 
-1. Keep your current Grey-Ghost/.env and Grey-Ghost/data/ folder exactly where they are.
-2. Replace the other project files/folders with the contents of this archive.
-3. From the Grey-Ghost folder run:
+2. Replace the rest of your Grey-Ghost project with the contents of this folder.
 
+3. In Terminal, from the Grey-Ghost project folder, run:
    npm install
    npm run commands:deploy
    npm run check
 
-4. If the check succeeds, commit and push:
-
+4. If npm run check succeeds, commit and push:
    git add .
-   git commit -m "Release Grey Ghost v0.20.0"
+   git commit -m "Release Grey Ghost v0.22.0"
    git push
 
-5. Railway will rebuild dist/ during deployment. Do not copy an old dist/ folder back in.
+Railway should redeploy after the push.
 
-NEW IN v0.20.0
-- Persistent Realm characters
-- /daily claim: 2–5 coins every 24 hours
-- /daily train: Health / Damage / Resistance training
-- /coin balance and /coin history
-- Five-tier mount and armour catalogue
-- /shop and /buy
-- /inventory, /stable, /armoury, and /loadout
-- Economy data in data/economy.json
-- Economy included in new v2 server backups; v1 backups still restore
-
-Reserved for v0.21.0: equipment upgrades, injuries/recovery, bandages, ransom/spoils, and jousting integration.
+IMPORTANT: do not replace your existing .env or data/ folder.

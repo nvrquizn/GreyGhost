@@ -11,7 +11,7 @@ export const grantCommand: Command = {
     .setDefaultMemberPermissions(PermissionFlagsBits.ManageGuild)
     .addSubcommand((sub) => sub.setName("coins").setDescription("Grant coins to a Realm character.")
       .addUserOption((option) => option.setName("member").setDescription("Member to receive the coins.").setRequired(true))
-      .addIntegerOption((option) => option.setName("amount").setDescription("Coin amount to grant.").setRequired(true).setMinValue(1).setMaxValue(1000000))
+      .addIntegerOption((option) => option.setName("amount").setDescription("Coin amount to grant.").setRequired(true).setMinValue(1))
       .addStringOption((option) => option.setName("reason").setDescription("Optional ledger reason.").setMaxLength(80)))
     .addSubcommand((sub) => sub.setName("item").setDescription("Grant a mount, armour piece, or supply item.")
       .addUserOption((option) => option.setName("member").setDescription("Member to receive the item.").setRequired(true))
@@ -39,7 +39,7 @@ export const grantCommand: Command = {
       const code = (error as Error).message;
       if (code === "CHARACTER_REQUIRED") { await interaction.reply({ content: `${member} needs to create a Realm character first with \`/character create\`.`, flags: MessageFlags.Ephemeral }); return; }
       if (code === "ITEM_OWNED") { await interaction.reply({ content: `${member} already owns that non-stackable item.`, flags: MessageFlags.Ephemeral }); return; }
-      if (code === "INVALID_AMOUNT") { await interaction.reply({ content: "Choose a coin amount between 1 and 1,000,000.", flags: MessageFlags.Ephemeral }); return; }
+      if (code === "INVALID_AMOUNT") { await interaction.reply({ content: "Choose a positive whole-number coin amount.", flags: MessageFlags.Ephemeral }); return; }
       throw error;
     }
   },

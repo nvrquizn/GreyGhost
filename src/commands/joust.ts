@@ -9,6 +9,7 @@ import {
   withdrawFromJoust,
 } from "../services/guild-settings.js";
 import { validJoustBuild } from "../jousts/engine.js";
+import { getEconomyPlayer } from "../economy/store.js";
 import { beginJoust, joustPodium, publishJoustLobby, runJoustRound } from "../jousts/runtime.js";
 
 function canHost(interaction: { member: { permissions: { has(permission: bigint): boolean } }; user: { id: string } }, hostId: string): boolean {
@@ -25,7 +26,11 @@ export const joustCommand: Command = {
     .setDescription("Enter and host automated jousting tournaments.")
     .setDMPermission(false)
     .addSubcommand((sub) => sub.setName("create").setDescription("Create a draft joust in this channel.")
-      .addStringOption((option) => option.setName("title").setDescription("Tournament title.").setMaxLength(100).setRequired(true)))
+      .addStringOption((option) => option.setName("title").setDescription("Tournament title.").setMaxLength(100).setRequired(true))
+      .addStringOption((option) => option.setName("stakes").setDescription("Whether this joust permits spoils and ransoms.").setRequired(true).addChoices(
+        { name: "Competitive — spoils enabled", value: "competitive" },
+        { name: "Casual — no spoils", value: "casual" },
+      )))
     .addSubcommand((sub) => idOption(sub.setName("publish").setDescription("Open a joust lobby.")))
     .addSubcommand((sub) => idOption(sub.setName("enter").setDescription("Enter or update your entry in an open joust."))
       .addStringOption((option) => option.setName("horse").setDescription("Choose your mount.").setRequired(true).addChoices(
@@ -54,8 +59,9 @@ export const joustCommand: Command = {
         title: interaction.options.getString("title", true),
         hostId: interaction.user.id,
         channelId: interaction.channelId,
+        competitive: interaction.options.getString("stakes", true) === "competitive",
       });
-      await interaction.reply({ content: `Created draft joust **#${joust.id} · ${joust.title}**. Open the lists with \`/joust publish joust-id:${joust.id}\`.`, flags: MessageFlags.Ephemeral });
+      await interaction.reply({ content: `Created draft joust **#${joust.id} · ${joust.title}** (${joust.competitive ? "competitive" : "casual"}). Open the lists with \`/joust publish joust-id:${joust.id}\`.`, flags: MessageFlags.Ephemeral });
       return;
     }
 
@@ -67,6 +73,10 @@ export const joustCommand: Command = {
     }
 
     if (subcommand === "enter") {
+      if (joust.competitive && !(await getEconomyPlayer(interaction.guildId, interaction.user.id))) {
+        await interaction.reply({ content: "Competitive jousts require a Realm character so Grey Ghost can track coins, equipment, and ransoms. Create one with `/character create` first.", flags: MessageFlags.Ephemeral });
+        return;
+      }
       const settings = await getGuildSettings(interaction.guildId);
       const house = interaction.options.getRole("house", true);
       const configuredHouses = settings.selfRolePanels?.houses?.roles.map((entry) => entry.roleId) ?? [];

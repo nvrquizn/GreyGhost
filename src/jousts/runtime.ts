@@ -14,6 +14,7 @@ import {
 import { refreshStatsDashboard } from "../stats/dashboard.js";
 import { applyJoustInjury } from "../economy/store.js";
 import { publishChronicleEntry } from "../chronicles/runtime.js";
+import { createJoustSpoilClaim } from "../combat/store.js";
 
 function entrantLine(joust: Joust, userId: string): string {
   const entrant = joust.entrants[userId];
@@ -61,7 +62,7 @@ export async function publishJoustLobby(guild: Guild, joust: Joust): Promise<Jou
       .addFields(
         { name: "Stat Budget", value: "Health + Damage + Resistance must equal **2**. Each stat may range from **−3 to 8**." },
         { name: "Mounts", value: "**Destrier:** greater health and resistance.\n**Courser:** greater striking power." },
-        { name: "Rules", value: "No same-House tilts. If everyone selects the same House, Grey Ghost randomly spreads riders across available Houses. Each tilt won earns that House **2 points**." },
+        { name: "Rules", value: `No same-House tilts. If everyone selects the same House, Grey Ghost randomly spreads riders across available Houses. Each tilt won earns that House **2 points**.\n**Stakes:** ${joust.competitive ? "Competitive — winners gain a right of spoils after each tilt." : "Casual — no spoils or ransoms."}` },
         { name: "Host", value: `<@${joust.hostId}>`, inline: true },
       )
       .setFooter({ text: "You may update your entry or withdraw until the host begins." })],
@@ -107,6 +108,10 @@ export async function runJoustRound(guild: Guild, joustId: number, staffId: stri
       const injury = await applyJoustInjury(guild.id, match.loserId, `Joust #${result.joust.id} round ${match.round}`);
       return injury?.injury ? `<@${match.loserId}> is **${injury.injury.severity}**.` : undefined;
     }))).filter((line): line is string => Boolean(line));
+    const spoils = result.joust.competitive
+      ? await Promise.all(result.matches.map((match) => createJoustSpoilClaim(guild.id, { joustId: result.joust.id, round: match.round, winnerId: match.winnerId, loserId: match.loserId })))
+      : [];
+    const spoilLines = spoils.map((claim) => `<@${claim.winnerId}> gained **spoils claim #${claim.id}** over <@${claim.loserId}> — use \`/spoils claim\`.`);
     await channel.send({ embeds: [new EmbedBuilder()
       .setColor(0xb87333)
       .setTitle(`${result.joust.title} · Round ${result.joust.round}`)
@@ -114,6 +119,7 @@ export async function runJoustRound(guild: Guild, joustId: number, staffId: stri
       .addFields(
         { name: "Byes", value: byes.slice(0, 1024) },
         { name: "Injuries", value: injuries.join("\n").slice(0, 1024) || "No lasting injuries this round." },
+        { name: "Spoils", value: spoilLines.join("\n").slice(0, 1024) || "No spoils are at stake." },
         { name: "House Points Awarded", value: String(result.pointsAwarded), inline: true },
         { name: "Top Three Riders", value: joustPodium(result.joust) },
       )

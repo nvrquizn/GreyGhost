@@ -11,6 +11,7 @@ const typeLabels = {
   server_creation: "Founding",
   house_season: "House Season",
   joust_champion: "Tourney Champion",
+  melee_champion: "Grand Melee Champion",
   manual: "Realm Record",
 } as const;
 

@@ -192,7 +192,7 @@ export async function equipItem(guildId: string, userId: string, itemId: string)
 }
 
 export async function grantCoins(guildId: string, targetId: string, amount: number, staffId: string, reason = "Staff grant"): Promise<EconomyPlayer> {
-  if (!Number.isInteger(amount) || amount < 1 || amount > 1_000_000) throw new Error("INVALID_AMOUNT");
+  if (!Number.isSafeInteger(amount) || amount < 1) throw new Error("INVALID_AMOUNT");
   return mutate((data) => {
     const player = ensurePlayer(data, guildId, targetId);
     player.coins += amount;
@@ -282,6 +282,66 @@ export async function getJoustBonuses(guildId: string, userId: string): Promise<
     resistance: (mount?.bonuses?.resistance ?? 0) + (armour?.bonuses?.resistance ?? 0),
     injuryPenalty: injuryPenalty(injury?.severity),
   };
+}
+
+
+export async function takeSpoilsCoins(guildId: string, winnerId: string, loserId: string, cap = 50): Promise<number> {
+  return mutate((data) => {
+    const winner = ensurePlayer(data, guildId, winnerId);
+    const loser = ensurePlayer(data, guildId, loserId);
+    const amount = Math.min(cap, Math.floor(loser.coins * 0.25));
+    if (amount < 1) throw new Error("NO_COINS_TO_CLAIM");
+    loser.coins -= amount;
+    winner.coins += amount;
+    const now = Date.now();
+    loser.coinHistory.push({ amount: -amount, reason: "Competitive joust spoils", createdAt: now });
+    winner.coinHistory.push({ amount, reason: "Competitive joust spoils", createdAt: now });
+    loser.coinHistory = loser.coinHistory.slice(-100);
+    winner.coinHistory = winner.coinHistory.slice(-100);
+    return amount;
+  });
+}
+
+export async function escrowBestItem(guildId: string, userId: string, category: "mount" | "armour"): Promise<import("./catalogue.js").ShopItem> {
+  return mutate((data) => {
+    const player = ensurePlayer(data, guildId, userId);
+    const candidates = player.inventory
+      .map((id) => shopItemMap.get(id))
+      .filter((item): item is NonNullable<typeof item> => Boolean(item) && item!.category === category && item!.tier > 1)
+      .sort((a, b) => b.tier - a.tier || b.price - a.price);
+    const item = candidates[0];
+    if (!item) throw new Error("NO_ELIGIBLE_SPOILS_ITEM");
+    const index = player.inventory.indexOf(item.id);
+    if (index >= 0) player.inventory.splice(index, 1);
+    if (category === "mount" && player.equippedMountId === item.id) delete player.equippedMountId;
+    if (category === "armour" && player.equippedArmourId === item.id) delete player.equippedArmourId;
+    return item;
+  });
+}
+
+export async function receiveTransferredItem(guildId: string, userId: string, itemId: string): Promise<EconomyPlayer> {
+  if (!shopItemMap.has(itemId)) throw new Error("ITEM_NOT_FOUND");
+  return mutate((data) => {
+    const player = ensurePlayer(data, guildId, userId);
+    player.inventory.push(itemId);
+    return player;
+  });
+}
+
+export async function payRansom(guildId: string, loserId: string, winnerId: string, amount: number, itemId: string): Promise<void> {
+  await mutate((data) => {
+    const loser = ensurePlayer(data, guildId, loserId);
+    const winner = ensurePlayer(data, guildId, winnerId);
+    if (loser.coins < amount) throw new Error("INSUFFICIENT_COINS");
+    loser.coins -= amount;
+    winner.coins += amount;
+    loser.inventory.push(itemId);
+    const now = Date.now();
+    loser.coinHistory.push({ amount: -amount, reason: "Equipment ransom", createdAt: now });
+    winner.coinHistory.push({ amount, reason: "Equipment ransom received", createdAt: now });
+    loser.coinHistory = loser.coinHistory.slice(-100);
+    winner.coinHistory = winner.coinHistory.slice(-100);
+  });
 }
 
 export async function exportGuildEconomy(guildId: string): Promise<EconomyGuild> {

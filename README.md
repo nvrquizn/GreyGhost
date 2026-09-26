@@ -400,3 +400,7 @@ src/
 Staff can use `/grant coins` and `/grant item` to award members without spending from their own balance. Members still use `/buy` when they are purchasing items with their own coins.
 
 Joust losers now have a chance to receive a temporary injury. Field Bandages can be bought or granted, then consumed with `/recovery bandage`.
+
+## v0.22.0 — Spoils, ransoms & grand melees
+
+Competitive jousts may now create rights of spoils, including capped coin claims and ransomable non-starter equipment. Grand melees add horse-free last-fighter-standing tournaments driven by character training and equipped armour. Use `/spoils` and `/melee` to access the new systems.

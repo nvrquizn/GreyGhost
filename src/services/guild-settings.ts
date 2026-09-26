@@ -113,7 +113,7 @@ const eventsSchema = z.object({
 
 const chronicleEntrySchema = z.object({
   id: z.number().int().positive(),
-  type: z.enum(["server_creation", "house_season", "joust_champion", "manual"]),
+  type: z.enum(["server_creation", "house_season", "joust_champion", "melee_champion", "manual"]),
   title: z.string().min(1).max(120),
   description: z.string().min(1).max(2000),
   occurredAt: z.number().int().positive(),
@@ -349,6 +349,7 @@ export const joustSchema = z.object({
   round: z.number().int().min(0),
   matches: z.array(joustMatchSchema).max(1000),
   championIds: z.array(z.string()).max(500),
+  competitive: z.boolean().default(false),
   lobbyMessageId: z.string().optional(),
   createdAt: z.number(),
 });
@@ -1691,7 +1692,7 @@ export async function closeQuizQuestion(
 
 export async function createJoust(
   guildId: string,
-  input: Pick<Joust, "title" | "hostId" | "channelId">,
+  input: Pick<Joust, "title" | "hostId" | "channelId"> & { competitive?: boolean },
 ): Promise<Joust> {
   let created: Joust | undefined;
   writeQueue = writeQueue.catch(() => undefined).then(async () => {
@@ -1707,6 +1708,7 @@ export async function createJoust(
       round: 0,
       matches: [],
       championIds: [],
+      competitive: input.competitive ?? false,
       createdAt: Date.now(),
     });
     jousts.nextJoustNumber += 1;

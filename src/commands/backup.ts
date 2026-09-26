@@ -17,6 +17,7 @@ import {
   suggestionSchema,
 } from "../services/suggestions.js";
 import { economyGuildSchema, exportGuildEconomy, replaceGuildEconomy } from "../economy/store.js";
+import { combatGuildBackupSchema, exportGuildCombat, replaceGuildCombat } from "../combat/store.js";
 
 const backupV1Schema = z.object({
   format: z.literal("grey-ghost-server-backup"),
@@ -33,7 +34,12 @@ const backupV2Schema = backupV1Schema.omit({ version: true }).extend({
   economy: economyGuildSchema,
 });
 
-const backupSchema = z.union([backupV2Schema, backupV1Schema]);
+const backupV3Schema = backupV2Schema.omit({ version: true }).extend({
+  version: z.literal(3),
+  combat: combatGuildBackupSchema,
+});
+
+const backupSchema = z.union([backupV3Schema, backupV2Schema, backupV1Schema]);
 
 export const backupCommand: Command = {
   data: new SlashCommandBuilder()
@@ -68,15 +74,16 @@ export const backupCommand: Command = {
 
     if (subcommand === "create") {
       await interaction.deferReply({ flags: MessageFlags.Ephemeral });
-      const backup = backupV2Schema.parse({
+      const backup = backupV3Schema.parse({
         format: "grey-ghost-server-backup",
-        version: 2,
+        version: 3,
         createdAt: new Date().toISOString(),
         guildId: interaction.guildId,
         guildName: interaction.guild.name,
         settings: await getGuildSettings(interaction.guildId),
         suggestions: await getGuildSuggestions(interaction.guildId),
         economy: await exportGuildEconomy(interaction.guildId),
+        combat: await exportGuildCombat(interaction.guildId),
       });
       const date = new Date().toISOString().slice(0, 10);
       const file = new AttachmentBuilder(Buffer.from(`${JSON.stringify(backup, null, 2)}\n`), {
@@ -139,7 +146,8 @@ export const backupCommand: Command = {
 
     await replaceGuildSettings(interaction.guildId, result.data.settings);
     await replaceGuildSuggestions(interaction.guildId, result.data.suggestions);
-    if (result.data.version === 2) await replaceGuildEconomy(interaction.guildId, result.data.economy);
+    if (result.data.version === 2 || result.data.version === 3) await replaceGuildEconomy(interaction.guildId, result.data.economy);
+    if (result.data.version === 3) await replaceGuildCombat(interaction.guildId, result.data.combat);
     await interaction.editReply(
       `Backup from <t:${Math.floor(new Date(result.data.createdAt).getTime() / 1000)}:F> restored. Run \`/setup check\` to validate its channels, roles, and permissions.`,
     );

@@ -54,6 +54,8 @@ import { armouryCommand } from "./armoury.js";
 import { loadoutCommand } from "./loadout.js";
 import { grantCommand } from "./grant.js";
 import { recoveryCommand } from "./recovery.js";
+import { spoilsCommand } from "./spoils.js";
+import { meleeCommand } from "./melee.js";
 
 export const commands: Command[] = [
   pingCommand,
@@ -110,6 +112,8 @@ export const commands: Command[] = [
   loadoutCommand,
   grantCommand,
   recoveryCommand,
+  spoilsCommand,
+  meleeCommand,
 ];
 
 export const commandMap = new Map(
