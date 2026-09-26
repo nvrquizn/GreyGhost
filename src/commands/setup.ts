@@ -37,6 +37,8 @@ function settingsSummary(settings: GuildSettings): string {
     `**Dragon grant channel:** ${settings.dragonGrantChannelId ? `<#${settings.dragonGrantChannelId}>` : "Not configured (Grey Ghost will DM recipients)"}`,
     `**Champions role:** ${settings.championsRoleId ? `<@&${settings.championsRoleId}>` : "Not configured"}`,
     `**Tourney Summons:** ${settings.tourneySummonsRoleId ? `<@&${settings.tourneySummonsRoleId}>` : "Not configured"}`,
+    `**Event announcement channel:** ${settings.eventAnnouncementChannelId ? `<#${settings.eventAnnouncementChannelId}>` : "Not configured"}`,
+    `**Event chat:** ${settings.eventChatChannelId ?? settings.eventChannelId ? `<#${settings.eventChatChannelId ?? settings.eventChannelId}>` : "Not configured"}`,
     `**Modmail:** ${settings.modmail ? `tickets in <#${settings.modmail.categoryId}> · staff <@&${settings.modmail.staffRoleId}> · logs <#${settings.modmail.logChannelId}>` : "Not configured"}`,
     `**Moderation logs:** ${settings.moderation ? `<#${settings.moderation.logChannelId}>` : "Not configured"}`,
   ].join("\n");
@@ -204,6 +206,18 @@ export const setupCommand: Command = {
     )
     .addSubcommand((subcommand) =>
       subcommand
+        .setName("event-channel")
+        .setDescription("Choose where published competition announcements are posted.")
+        .addChannelOption((option) => option.setName("channel").setDescription("The event announcement channel.").addChannelTypes(ChannelType.GuildText, ChannelType.GuildAnnouncement).setRequired(true)),
+    )
+    .addSubcommand((subcommand) =>
+      subcommand
+        .setName("event-chat")
+        .setDescription("Choose where summoned members go to enter published competitions.")
+        .addChannelOption((option) => option.setName("channel").setDescription("The event chat where members use entry commands.").addChannelTypes(ChannelType.GuildText).setRequired(true)),
+    )
+    .addSubcommand((subcommand) =>
+      subcommand
         .setName("clear")
         .setDescription("Disable one or all onboarding settings.")
         .addStringOption((option) =>
@@ -228,6 +242,8 @@ export const setupCommand: Command = {
               { name: "Dragon grant channel", value: "dragonGrantChannelId" },
               { name: "Champions role", value: "championsRoleId" },
               { name: "Tourney Summons role", value: "tourneySummonsRoleId" },
+              { name: "Event announcement channel", value: "eventAnnouncementChannelId" },
+              { name: "Event chat", value: "eventChatChannelId" },
               { name: "All basic server settings", value: "all" },
             ),
         ),
@@ -343,6 +359,20 @@ ${settingsSummary(settings)}`,
       }
       const settings = await updateGuildSettings(interaction.guildId, { tourneySummonsRoleId: role.id });
       await interaction.reply({ content: `${role} will be pinged outside event embeds when jousts, melees, races, and festivals are published.\n\n${settingsSummary(settings)}`, flags: MessageFlags.Ephemeral });
+      return;
+    }
+
+    if (subcommand === "event-channel") {
+      const channel = interaction.options.getChannel("channel", true);
+      const settings = await updateGuildSettings(interaction.guildId, { eventAnnouncementChannelId: channel.id });
+      await interaction.reply({ content: `${channel} is now the event announcement channel. Published jousts, melees, races, and festivals will be posted there.\n\n${settingsSummary(settings)}`, flags: MessageFlags.Ephemeral });
+      return;
+    }
+
+    if (subcommand === "event-chat") {
+      const channel = interaction.options.getChannel("channel", true);
+      const settings = await updateGuildSettings(interaction.guildId, { eventChatChannelId: channel.id });
+      await interaction.reply({ content: `${channel} is now the event chat. Tourney Summons announcements will direct members there to use the event entry command.\n\n${settingsSummary(settings)}`, flags: MessageFlags.Ephemeral });
       return;
     }
 

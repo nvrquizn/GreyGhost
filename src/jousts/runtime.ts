@@ -57,14 +57,17 @@ export function joustPodium(joust: Joust): string {
 }
 
 export async function publishJoustLobby(guild: Guild, joust: Joust, prizePackage?: EventPrizePackage): Promise<Joust> {
-  const channel = await guild.channels.fetch(joust.channelId);
-  if (!channel || channel.type !== ChannelType.GuildText) throw new Error("JOUST_CHANNEL_INVALID");
-  const updated = await updateJoust(guild.id, joust.id, { status: "lobby" });
-  if (!updated) throw new Error("JOUST_NOT_FOUND");
   const settings = await getGuildSettings(guild.id);
+  const announcementChannelId = settings.eventAnnouncementChannelId;
+  const eventChatId = settings.eventChatChannelId ?? settings.eventChannelId;
+  if (!announcementChannelId || !eventChatId) throw new Error("JOUST_CHANNEL_NOT_CONFIGURED");
+  const channel = await guild.channels.fetch(announcementChannelId);
+  if (!channel || !channel.isSendable()) throw new Error("JOUST_CHANNEL_INVALID");
+  const updated = await updateJoust(guild.id, joust.id, { status: "lobby", channelId: announcementChannelId });
+  if (!updated) throw new Error("JOUST_NOT_FOUND");
   const summons = settings.tourneySummonsRoleId ? `<@&${settings.tourneySummonsRoleId}>` : undefined;
   const message = await channel.send({
-    content: summons ? `${summons} — go to <#${joust.channelId}> and type \`/joust enter joust-id:${joust.id}\` to join.` : undefined,
+    content: summons ? `${summons} — go to <#${eventChatId}> and type \`/joust enter joust-id:${joust.id}\` to join.` : `Go to <#${eventChatId}> and type \`/joust enter joust-id:${joust.id}\` to join.`,
     allowedMentions: summons ? { roles: [settings.tourneySummonsRoleId!] } : undefined,
     embeds: [new EmbedBuilder()
       .setColor(0x87ceeb)

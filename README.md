@@ -232,7 +232,9 @@ data is stored in `data/economy.json` and is included in v2 server backups.
 
 ## Duels, Renown, heirlooms, and event prizes
 
-Version 0.25.0 adds weekly character duels, permanent Renown, named weapons and heirlooms, and a shared competitive-event reward framework. Characters may complete up to five training duels per week against different opponents. Both duelists gain one point in a randomly selected training stat; the winner earns 2 Renown and the loser earns 1.
+Version 0.26.1 keeps the v0.26.0 stables and hunts update and adds separate configured event announcement and event-chat channels.
+
+Version 0.26.0 adds weekly character duels, permanent Renown, named weapons and heirlooms, and a shared competitive-event reward framework. Characters may complete up to five training duels per week against different opponents. Both duelists gain one point in a randomly selected training stat; the winner earns 2 Renown and the loser earns 1.
 
 Renown is visible on character cards and `/renown`, but never creates a Discord role. Joust pairing becomes Renown-aware only when at least one active rider has Renown; otherwise Grey Ghost keeps the original randomized cross-House draw.
 

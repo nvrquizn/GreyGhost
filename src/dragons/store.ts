@@ -31,6 +31,9 @@ export const dragonSchema = z.object({
   hornColor: z.string().max(60).optional(),
   traits: z.array(z.string().min(1).max(40)).max(3).default([]),
   description: z.string().max(1000).optional(),
+  lairName: z.string().max(80).optional(),
+  lairLocation: z.string().max(120).optional(),
+  lairDescription: z.string().max(500).optional(),
   status: dragonStatusSchema,
   riderId: z.string().optional(),
   formerRiderIds: z.array(z.string()).max(50).default([]),
@@ -346,4 +349,19 @@ export async function exportGuildDragons(guildId: string): Promise<DragonGuild> 
 export async function replaceGuildDragons(guildId: string, value: unknown): Promise<void> {
   const parsed = dragonGuildBackupSchema.parse(value);
   await mutate((data) => { data[guildId] = parsed; });
+}
+
+export async function setDragonLair(guildId: string, dragonId: number, changes: { name?: string; location?: string; description?: string; clear?: boolean }): Promise<Dragon> {
+  return mutate((data) => {
+    const dragon = guildOf(data, guildId).dragons[String(dragonId)];
+    if (!dragon) throw new Error("DRAGON_NOT_FOUND");
+    if (changes.clear) { delete dragon.lairName; delete dragon.lairLocation; delete dragon.lairDescription; }
+    else {
+      if (changes.name !== undefined) dragon.lairName = changes.name;
+      if (changes.location !== undefined) dragon.lairLocation = changes.location;
+      if (changes.description !== undefined) dragon.lairDescription = changes.description;
+    }
+    dragon.history.push({ at: Date.now(), text: changes.clear ? "Its recorded lair was cleared." : `Its lair was recorded as **${dragon.lairName ?? "Unnamed Lair"}**.` });
+    return dragonSchema.parse(dragon);
+  });
 }

@@ -88,14 +88,19 @@ export const meleeCommand: Command = {
         return;
       }
       try {
-        const opened = await publishMelee(interaction.guildId, meleeId);
-        const pack = await createPrizePackage(interaction.guild, { kind: "melee", eventId: meleeId, title: opened.title, secondMode, secondRole, thirdRole });
         const settings = await getGuildSettings(interaction.guildId);
+        const eventChatId = settings.eventChatChannelId ?? settings.eventChannelId;
+        if (!settings.eventAnnouncementChannelId || !eventChatId) {
+          await interaction.reply({ content: "Configure both `/setup event-channel` and `/setup event-chat` before publishing competitions.", flags: MessageFlags.Ephemeral });
+          return;
+        }
+        const opened = await publishMelee(interaction.guildId, meleeId, settings.eventAnnouncementChannelId);
+        const pack = await createPrizePackage(interaction.guild, { kind: "melee", eventId: meleeId, title: opened.title, secondMode, secondRole, thirdRole });
         const summons = settings.tourneySummonsRoleId ? `<@&${settings.tourneySummonsRoleId}>` : undefined;
-        const publishChannel = await interaction.guild.channels.fetch(opened.channelId).catch(() => null);
+        const publishChannel = await interaction.guild.channels.fetch(settings.eventAnnouncementChannelId).catch(() => null);
         if (!publishChannel?.isSendable()) throw new Error("MELEE_CHANNEL_INVALID");
         await publishChannel.send({
-          content: summons ? `${summons} — go to <#${opened.channelId}> and type \`/melee enter melee-id:${opened.id}\` to join.` : undefined,
+          content: summons ? `${summons} — go to <#${eventChatId}> and type \`/melee enter melee-id:${opened.id}\` to join.` : `Go to <#${eventChatId}> and type \`/melee enter melee-id:${opened.id}\` to join.`,
           allowedMentions: summons ? { roles: [settings.tourneySummonsRoleId!] } : undefined,
           embeds: [new EmbedBuilder().setColor(0x7b2d26).setTitle(`Grand Melee #${opened.id} · ${opened.title}`).setDescription(`The field is open. Enter with \`/melee enter melee-id:${opened.id}\`.\n\n**No horses:** trained character stats and equipped armour are used automatically.`).addFields({ name: "Rewards", value: prizeAnnouncementText(pack) }).setFooter({ text: "Last fighter standing wins." })],
         });

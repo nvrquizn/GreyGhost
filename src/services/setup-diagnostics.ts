@@ -88,6 +88,23 @@ export async function diagnoseGuildSetup(guild: Guild): Promise<SetupDiagnostics
   }
 
 
+  if (!settings.eventAnnouncementChannelId) result.warnings.push("Event announcement channel is not configured.");
+  else {
+    const eventChannel = guild.channels.cache.get(settings.eventAnnouncementChannelId);
+    if (!eventChannel) result.errors.push("The configured event announcement channel was deleted.");
+    else if (!eventChannel.isTextBased()) result.errors.push("The configured event announcement channel is not a text channel.");
+    else result.passed.push("The event announcement channel is available.");
+  }
+
+  const eventChatId = settings.eventChatChannelId ?? settings.eventChannelId;
+  if (!eventChatId) result.warnings.push("Event chat is not configured.");
+  else {
+    const eventChat = guild.channels.cache.get(eventChatId);
+    if (!eventChat) result.errors.push("The configured event chat was deleted.");
+    else if (!eventChat.isTextBased()) result.errors.push("The configured event chat is not a text channel.");
+    else result.passed.push("The event chat is available.");
+  }
+
   for (const [label, roleId] of [["Champions role", settings.championsRoleId], ["Tourney Summons role", settings.tourneySummonsRoleId]] as const) {
     if (!roleId) {
       result.warnings.push(`${label} is not configured.`);

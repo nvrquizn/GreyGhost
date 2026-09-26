@@ -55,6 +55,8 @@ export function renderHelp(member: GuildMember | null, isModmailStaff = false): 
           line("renown", "View permanent Realm Renown and standings."),
           line("heirloom", "View named weapons and heirlooms."),
           line("prize", "Claim pending Admirer-role event prizes."),
+          line("race", "Enter or inspect a horse race."),
+          line("hunt", "Go hunting for coin, Renown, and horse experience."),
         ].join("\n"),
       },
       {
@@ -66,7 +68,7 @@ export function renderHelp(member: GuildMember | null, isModmailStaff = false): 
           line("shop", "Browse mounts and armour for sale."),
           line("buy", "Purchase equipment with coin."),
           line("inventory", "View all equipment you own."),
-          line("stable", "View your owned mounts."),
+          line("stable", "View, customize, and train your owned horses."),
           line("armoury", "View your owned armour."),
           line("loadout", "Equip and inspect your mount and armour."),
         ].join("\n"),
@@ -80,6 +82,7 @@ export function renderHelp(member: GuildMember | null, isModmailStaff = false): 
       line("quiz", "Create and host live quizzes."),
       line("joust", "Create, publish, and run jousting tournaments."),
       line("melee", "Create, publish, and run grand melees."),
+      line("race", "Create, publish, and run horse races."),
     ].join("\n"),
   });
 
@@ -135,5 +138,5 @@ export function renderHelp(member: GuildMember | null, isModmailStaff = false): 
   }
 
   return embed
-    .setFooter({ text: "Version 0.25.0 · Slash and ? prefix commands" });
+    .setFooter({ text: "Version 0.26.1 · Slash and ? prefix commands" });
 }

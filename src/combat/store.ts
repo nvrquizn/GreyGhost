@@ -318,12 +318,13 @@ export async function createMelee(guildId: string, input: { title: string; hostI
   });
 }
 
-export async function publishMelee(guildId: string, meleeId: number): Promise<Melee> {
+export async function publishMelee(guildId: string, meleeId: number, channelId?: string): Promise<Melee> {
   return mutate((data) => {
     const melee = guildOf(data, guildId).melees[String(meleeId)];
     if (!melee) throw new Error("MELEE_NOT_FOUND");
     if (melee.status !== "draft") throw new Error("MELEE_NOT_DRAFT");
     melee.status = "lobby";
+    if (channelId) melee.channelId = channelId;
     return meleeSchema.parse(melee);
   });
 }

@@ -419,6 +419,10 @@ export const guildSettingsSchema = z.object({
   dragonGrantChannelId: z.string().optional(),
   championsRoleId: z.string().optional(),
   tourneySummonsRoleId: z.string().optional(),
+  // Legacy v0.26.0 field: this represented the event-entry/chat channel.
+  eventChannelId: z.string().optional(),
+  eventAnnouncementChannelId: z.string().optional(),
+  eventChatChannelId: z.string().optional(),
   eventPrizePackages: z.record(z.string(), eventPrizePackageSchema).optional(),
   collectionSets: z.record(z.string(), collectionSetSchema).optional(),
   selfRolePanels: z
@@ -554,6 +558,9 @@ export async function clearGuildSetting(
     delete current.moderatorRoleId;
     delete current.championsRoleId;
     delete current.tourneySummonsRoleId;
+    delete current.eventChannelId;
+    delete current.eventAnnouncementChannelId;
+    delete current.eventChatChannelId;
     settings[guildId] = current;
   } else {
     const current = { ...settings[guildId] };

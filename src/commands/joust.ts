@@ -26,7 +26,7 @@ export const joustCommand: Command = {
     .setName("joust")
     .setDescription("Enter and host automated jousting tournaments.")
     .setDMPermission(false)
-    .addSubcommand((sub) => sub.setName("create").setDescription("Create a draft joust in this channel.")
+    .addSubcommand((sub) => sub.setName("create").setDescription("Create a draft joust for the configured event channel.")
       .addStringOption((option) => option.setName("title").setDescription("Tournament title.").setMaxLength(100).setRequired(true))
       .addStringOption((option) => option.setName("stakes").setDescription("Whether this joust permits spoils and ransoms.").setRequired(true).addChoices(
         { name: "Competitive — spoils enabled", value: "competitive" },
@@ -154,6 +154,11 @@ export const joustCommand: Command = {
         return;
       }
       const settings = await getGuildSettings(interaction.guildId);
+      const eventChatId = settings.eventChatChannelId ?? settings.eventChannelId;
+      if (!settings.eventAnnouncementChannelId || !eventChatId) {
+        await interaction.reply({ content: "Configure both `/setup event-channel` and `/setup event-chat` before publishing competitions.", flags: MessageFlags.Ephemeral });
+        return;
+      }
       if ((settings.selfRolePanels?.houses?.roles.length ?? 0) < 2) {
         await interaction.reply({ content: "Configure at least two roles in the **House Allegiance** panel first.", flags: MessageFlags.Ephemeral });
         return;

@@ -21,6 +21,7 @@ import {
   restoreRiderDragon,
   revokeSpecialDragonRider,
   retireDragon,
+  setDragonLair,
   type Dragon,
   type DragonStage,
 } from "../dragons/store.js";
@@ -114,6 +115,7 @@ function dragonEmbed(dragon: Dragon): EmbedBuilder {
       { name: "Bond", value: dragon.status === "bonded" ? bondLabel(dragon) : "Former bond recorded", inline: true },
       { name: "Growth", value: growth, inline: true },
       { name: "Life with a rider", value: `Flights **${activity.flights}** · Hunts **${activity.hunts}** · Patrols **${activity.patrols}** · Training **${activity.trainings}** · Interactions **${activity.interactions}** · Events **${activity.events}**` },
+      { name: "Lair", value: dragon.lairName ? `**${dragon.lairName}**${dragon.lairLocation ? ` · ${dragon.lairLocation}` : ""}${dragon.lairDescription ? `\n${dragon.lairDescription}` : ""}` : "No lair recorded." },
       { name: "Dragon achievements", value: dragonAchievements(dragon).join(" · ") || "None yet" },
     )
     .setFooter({ text: `Dragon Registry #${dragon.id}` })
@@ -208,6 +210,11 @@ export const dragonCommand: Command = {
     .addSubcommand((sub) => sub.setName("fly").setDescription("Take a small or older dragon on a flight."))
     .addSubcommand((sub) => sub.setName("patrol").setDescription("Send a medium or older dragon on patrol."))
     .addSubcommand((sub) => sub.setName("hunt").setDescription("Take a medium or older dragon hunting; this also counts as feeding."))
+    .addSubcommand((sub) => sub.setName("lair").setDescription("Set, view, or clear your dragon's lair.")
+      .addStringOption((option) => option.setName("action").setDescription("What to do.").setRequired(true).addChoices({ name: "View", value: "view" }, { name: "Set / update", value: "set" }, { name: "Clear", value: "clear" }))
+      .addStringOption((option) => option.setName("name").setDescription("Lair name.").setMaxLength(80))
+      .addStringOption((option) => option.setName("location").setDescription("Where the lair is located.").setMaxLength(120))
+      .addStringOption((option) => option.setName("description").setDescription("Describe the lair.").setMaxLength(500)))
     .addSubcommand((sub) => sub.setName("grant").setDescription("Grant special dragon eligibility to a member without the Dragonrider role.")
       .addUserOption((option) => option.setName("user").setDescription("Member receiving special dragon eligibility.").setRequired(true)))
     .addSubcommand((sub) => sub.setName("revoke").setDescription("Revoke a member's special dragon eligibility.")
@@ -424,6 +431,26 @@ Notification destination: ${delivery}.`,
 
     const dragon = await getRiderDragon(interaction.guildId, interaction.user.id);
     if (!dragon) { await interaction.reply({ content: "You do not currently have a bonded dragon.", flags: MessageFlags.Ephemeral }); return; }
+
+    if (sub === "lair") {
+      const action = interaction.options.getString("action", true);
+      if (action === "view") {
+        await interaction.reply({ embeds: [dragonEmbed(dragon)], flags: MessageFlags.Ephemeral });
+        return;
+      }
+      if (action === "clear") {
+        const updated = await setDragonLair(interaction.guildId, dragon.id, { clear: true });
+        await interaction.reply({ content: `**${updated.name}** no longer has a recorded lair.`, flags: MessageFlags.Ephemeral });
+        return;
+      }
+      const name = interaction.options.getString("name") ?? undefined;
+      const location = interaction.options.getString("location") ?? undefined;
+      const description = interaction.options.getString("description") ?? undefined;
+      if (!name && !location && !description) { await interaction.reply({ content: "Give Grey Ghost at least a lair name, location, or description.", flags: MessageFlags.Ephemeral }); return; }
+      const updated = await setDragonLair(interaction.guildId, dragon.id, { name, location, description });
+      await interaction.reply({ content: `Recorded **${updated.name}**'s lair.`, embeds: [dragonEmbed(updated)], flags: MessageFlags.Ephemeral });
+      return;
+    }
 
     if (sub === "feed") {
       const result = await feedDragon(interaction.guildId, dragon.id);
