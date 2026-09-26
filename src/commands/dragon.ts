@@ -13,15 +13,19 @@ import {
   getFormerRiderDragon,
   getDragons,
   getRiderDragon,
+  grantSpecialDragonRider,
+  isSpecialDragonRider,
   nextDragonGrowth,
   recordDragonActivity,
   recordDragonEncounter,
   restoreRiderDragon,
+  revokeSpecialDragonRider,
   retireDragon,
   type Dragon,
   type DragonStage,
 } from "../dragons/store.js";
 import { hasRequiredModeratorRole, moderatorRoleRequirementText } from "../moderation/access.js";
+import { getGuildSettings } from "../services/guild-settings.js";
 
 const stageLabels: Record<DragonStage, string> = {
   hatchling: "Hatchling",
@@ -132,6 +136,7 @@ function canManage(interaction: ChatInputCommandInteraction<"cached">): boolean 
 }
 
 async function riderEligible(interaction: ChatInputCommandInteraction<"cached">, userId: string): Promise<boolean> {
+  if (await isSpecialDragonRider(interaction.guildId, userId)) return true;
   const member = interaction.guild.members.cache.get(userId) ?? await interaction.guild.members.fetch(userId).catch(() => null);
   return member ? hasRequiredModeratorRole(interaction.guildId, member) : false;
 }
@@ -203,6 +208,10 @@ export const dragonCommand: Command = {
     .addSubcommand((sub) => sub.setName("fly").setDescription("Take a small or older dragon on a flight."))
     .addSubcommand((sub) => sub.setName("patrol").setDescription("Send a medium or older dragon on patrol."))
     .addSubcommand((sub) => sub.setName("hunt").setDescription("Take a medium or older dragon hunting; this also counts as feeding."))
+    .addSubcommand((sub) => sub.setName("grant").setDescription("Grant special dragon eligibility to a member without the Dragonrider role.")
+      .addUserOption((option) => option.setName("user").setDescription("Member receiving special dragon eligibility.").setRequired(true)))
+    .addSubcommand((sub) => sub.setName("revoke").setDescription("Revoke a member's special dragon eligibility.")
+      .addUserOption((option) => option.setName("user").setDescription("Member losing special dragon eligibility.").setRequired(true)))
     .addSubcommand((sub) => sub.setName("growth").setDescription("Add manual growth days to a dragon.")
       .addStringOption((option) => option.setName("dragon").setDescription("Dragon name.").setRequired(true))
       .addIntegerOption((option) => option.setName("days").setDescription("Growth days to add.").setMinValue(1).setMaxValue(3650).setRequired(true)))
@@ -219,8 +228,9 @@ export const dragonCommand: Command = {
     const sub = interaction.options.getSubcommand();
 
     if (sub === "create") {
-      if (!(await hasRequiredModeratorRole(interaction.guildId, interaction.member))) {
-        await interaction.reply({ content: await moderatorRoleRequirementText(interaction.guildId, interaction.guild), flags: MessageFlags.Ephemeral });
+      const invokerEligible = (await hasRequiredModeratorRole(interaction.guildId, interaction.member)) || (await isSpecialDragonRider(interaction.guildId, interaction.user.id));
+      if (!invokerEligible && !canManage(interaction)) {
+        await interaction.reply({ content: `${await moderatorRoleRequirementText(interaction.guildId, interaction.guild)} A specially granted rider may also create their own dragon.`, flags: MessageFlags.Ephemeral });
         return;
       }
       const rider = interaction.options.getUser("rider", true);
@@ -229,7 +239,7 @@ export const dragonCommand: Command = {
         return;
       }
       if (!(await riderEligible(interaction, rider.id))) {
-        await interaction.reply({ content: "That member does not have the configured moderator/Dragonrider role, so Grey Ghost cannot bond them to a dragon.", flags: MessageFlags.Ephemeral });
+        await interaction.reply({ content: "That member does not have the configured Dragonrider role or special dragon eligibility, so Grey Ghost cannot bond them to a dragon.", flags: MessageFlags.Ephemeral });
         return;
       }
       const bonded = await getRiderDragon(interaction.guildId, rider.id);
@@ -262,6 +272,61 @@ export const dragonCommand: Command = {
         const code = (error as Error).message;
         await interaction.reply({ content: code === "DRAGON_NAME_TAKEN" ? "A dragon with that name is already in the registry." : code === "RIDER_ALREADY_HAS_DRAGON" ? "That Dragonrider already has a dragon in the registry and may have only one." : `The dragon could not be created: ${code}.`, flags: MessageFlags.Ephemeral });
       }
+      return;
+    }
+
+    if (sub === "grant" || sub === "revoke") {
+      if (!canManage(interaction)) {
+        await interaction.reply({ content: "Only a server manager may grant or revoke special dragon eligibility.", flags: MessageFlags.Ephemeral });
+        return;
+      }
+      const user = interaction.options.getUser("user", true);
+      if (user.bot) {
+        await interaction.reply({ content: "Bots cannot be granted dragons.", flags: MessageFlags.Ephemeral });
+        return;
+      }
+
+      if (sub === "revoke") {
+        const changed = await revokeSpecialDragonRider(interaction.guildId, user.id);
+        await interaction.reply({
+          content: changed
+            ? `${user}'s special dragon eligibility has been revoked. Any dragon they already have remains in the registry unless you retire it separately.`
+            : `${user} did not have special dragon eligibility.`,
+          flags: MessageFlags.Ephemeral,
+        });
+        return;
+      }
+
+      const newlyGranted = await grantSpecialDragonRider(interaction.guildId, user.id);
+      const retired = await getFormerRiderDragon(interaction.guildId, user.id);
+      const restored = retired
+        ? await restoreRiderDragon(interaction.guildId, user.id, `<@${user.id}> received special dragon dispensation; their former bond with **${retired.name}** was restored.`)
+        : undefined;
+      const current = restored ?? await getRiderDragon(interaction.guildId, user.id);
+      const settings = await getGuildSettings(interaction.guildId);
+      const instruction = current
+        ? `${user}, you have been granted special dragon eligibility in **${interaction.guild.name}**. Your bond with **${current.name}** is active again; use \`/dragon view\` and the dragon-care commands in the server.`
+        : `${user}, you have been granted special dragon eligibility in **${interaction.guild.name}**. Return to the server and use \`/dragon create\` with yourself as the rider to configure your one dragon.`;
+
+      let delivery = "DM";
+      if (settings.dragonGrantChannelId) {
+        const channel = interaction.guild.channels.cache.get(settings.dragonGrantChannelId) ?? await interaction.guild.channels.fetch(settings.dragonGrantChannelId).catch(() => null);
+        if (channel?.isTextBased() && "send" in channel) {
+          const sent = await channel.send({ content: instruction, allowedMentions: { users: [user.id] } }).then(() => true).catch(() => false);
+          if (sent) delivery = `<#${settings.dragonGrantChannelId}>`;
+          else await user.send(instruction.replace(`${user}, `, "")).catch(() => undefined);
+        } else {
+          await user.send(instruction.replace(`${user}, `, "")).catch(() => undefined);
+        }
+      } else {
+        await user.send(instruction.replace(`${user}, `, "")).catch(() => undefined);
+      }
+
+      await interaction.reply({
+        content: `${newlyGranted ? `${user} now has` : `${user} already had`} special dragon eligibility.${current ? ` **${current.name}** is bonded to them.` : " They may create one dragon for themselves."}
+Notification destination: ${delivery}.`,
+        flags: MessageFlags.Ephemeral,
+      });
       return;
     }
 

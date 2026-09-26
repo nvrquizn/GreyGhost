@@ -1,12 +1,22 @@
 import { Events, type Client, type GuildMember, type PartialGuildMember } from "discord.js";
 import { hasRequiredModeratorRole } from "../moderation/access.js";
-import { restoreRiderDragon, retireRiderDragons } from "./store.js";
+import { isSpecialDragonRider, restoreRiderDragon, retireRiderDragons } from "./store.js";
 
 async function isDragonrider(member: GuildMember | PartialGuildMember): Promise<boolean> {
-  return hasRequiredModeratorRole(member.guild.id, member);
+  return (await hasRequiredModeratorRole(member.guild.id, member)) || (await isSpecialDragonRider(member.guild.id, member.id));
 }
 
 export function registerDragonRuntime(client: Client): void {
+  client.on(Events.GuildMemberAdd, (member) => {
+    void (async () => {
+      if (await isDragonrider(member)) {
+        await restoreRiderDragon(member.guild.id, member.id, `<@${member.id}> returned to the realm; their former dragon bond was restored.`);
+      }
+    })().catch((error) => {
+      console.error(`Could not restore dragon for returning member ${member.id}:`, error);
+    });
+  });
+
   client.on(Events.GuildMemberUpdate, (oldMember, newMember) => {
     void (async () => {
       const oldEligible = await isDragonrider(oldMember);
@@ -16,7 +26,7 @@ export function registerDragonRuntime(client: Client): void {
         return;
       }
       if (!oldEligible && newEligible) {
-        await restoreRiderDragon(newMember.guild.id, newMember.id);
+        await restoreRiderDragon(newMember.guild.id, newMember.id, `<@${newMember.id}> returned to service as a Dragonrider; their bond was restored.`);
       }
     })().catch((error) => {
       console.error(`Could not update dragon status for ${newMember.id}:`, error);

@@ -424,7 +424,7 @@ Members with Realm characters can also open confirmation-based trades for eligib
 Expeditions now keep a live text status in-channel showing the party and choice progress, and automatically ping party members when a stage opens or the expedition returns.
 
 
-## v0.24.1 — Dragonrider Access & Growth Controls
+## v0.24.2 — Dragonrider Access & Growth Controls
 
 - Configure the role required for moderation commands and dragon creation with `/setup moderator-role`.
 - Moderation commands now require the configured moderator role in addition to their normal Discord permissions.

@@ -54,6 +54,7 @@ export const dragonSchema = z.object({
 export const dragonGuildBackupSchema = z.object({
   nextDragonNumber: z.number().int().positive().default(1),
   dragons: z.record(z.string(), dragonSchema).default({}),
+  specialRiderIds: z.array(z.string()).max(500).default([]),
 });
 
 const dragonFileSchema = z.record(z.string(), dragonGuildBackupSchema);
@@ -106,7 +107,7 @@ async function mutate<T>(fn: (data: Record<string, DragonGuild>) => T | Promise<
 }
 
 function guildOf(data: Record<string, DragonGuild>, guildId: string): DragonGuild {
-  return (data[guildId] ??= { nextDragonNumber: 1, dragons: {} });
+  return (data[guildId] ??= { nextDragonNumber: 1, dragons: {}, specialRiderIds: [] });
 }
 
 function utcDay(now = Date.now()): string {
@@ -170,6 +171,29 @@ export async function createDragon(guildId: string, input: {
   });
 }
 
+
+export async function isSpecialDragonRider(guildId: string, userId: string): Promise<boolean> {
+  return Boolean((await load())[guildId]?.specialRiderIds.includes(userId));
+}
+
+export async function grantSpecialDragonRider(guildId: string, userId: string): Promise<boolean> {
+  return mutate((data) => {
+    const guild = guildOf(data, guildId);
+    if (guild.specialRiderIds.includes(userId)) return false;
+    guild.specialRiderIds.push(userId);
+    return true;
+  });
+}
+
+export async function revokeSpecialDragonRider(guildId: string, userId: string): Promise<boolean> {
+  return mutate((data) => {
+    const guild = guildOf(data, guildId);
+    const before = guild.specialRiderIds.length;
+    guild.specialRiderIds = guild.specialRiderIds.filter((id) => id !== userId);
+    return guild.specialRiderIds.length !== before;
+  });
+}
+
 export async function getDragon(guildId: string, dragonId: number): Promise<Dragon | undefined> {
   return (await load())[guildId]?.dragons[String(dragonId)];
 }
@@ -193,7 +217,7 @@ export async function getFormerRiderDragon(guildId: string, riderId: string): Pr
     .sort((a, b) => (b.wildAt ?? 0) - (a.wildAt ?? 0))[0];
 }
 
-export async function restoreRiderDragon(guildId: string, riderId: string): Promise<Dragon | undefined> {
+export async function restoreRiderDragon(guildId: string, riderId: string, historyText?: string): Promise<Dragon | undefined> {
   return mutate((data) => {
     const guild = guildOf(data, guildId);
     const existing = Object.values(guild.dragons).find((dragon) => dragon.status === "bonded" && dragon.riderId === riderId);
@@ -206,7 +230,7 @@ export async function restoreRiderDragon(guildId: string, riderId: string): Prom
     dragon.status = "bonded";
     dragon.riderId = riderId;
     delete dragon.wildAt;
-    dragon.history.push({ at: now, text: `<@${riderId}> returned to service as a Dragonrider; their bond was restored.` });
+    dragon.history.push({ at: now, text: historyText ?? `<@${riderId}> regained dragon eligibility; their former bond was restored.` });
     return dragonSchema.parse(dragon);
   });
 }
@@ -316,7 +340,7 @@ export async function recordDragonEncounter(guildId: string, leftId: number, rig
 }
 
 export async function exportGuildDragons(guildId: string): Promise<DragonGuild> {
-  return dragonGuildBackupSchema.parse((await load())[guildId] ?? { nextDragonNumber: 1, dragons: {} });
+  return dragonGuildBackupSchema.parse((await load())[guildId] ?? { nextDragonNumber: 1, dragons: {}, specialRiderIds: [] });
 }
 
 export async function replaceGuildDragons(guildId: string, value: unknown): Promise<void> {

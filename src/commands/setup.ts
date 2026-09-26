@@ -34,6 +34,7 @@ function settingsSummary(settings: GuildSettings): string {
     `**Reaction logs:** ${settings.reactionLogChannelId ? `<#${settings.reactionLogChannelId}>` : "Not configured"}`,
     `**Chronicles:** ${settings.chronicleChannelId ? `<#${settings.chronicleChannelId}>` : "Not configured"}`,
     `**Moderator role:** ${settings.moderatorRoleId ? `<@&${settings.moderatorRoleId}>` : "Not configured"}`,
+    `**Dragon grant channel:** ${settings.dragonGrantChannelId ? `<#${settings.dragonGrantChannelId}>` : "Not configured (Grey Ghost will DM recipients)"}`,
     `**Modmail:** ${settings.modmail ? `tickets in <#${settings.modmail.categoryId}> · staff <@&${settings.modmail.staffRoleId}> · logs <#${settings.modmail.logChannelId}>` : "Not configured"}`,
     `**Moderation logs:** ${settings.moderation ? `<#${settings.moderation.logChannelId}>` : "Not configured"}`,
   ].join("\n");
@@ -179,6 +180,16 @@ export const setupCommand: Command = {
     )
     .addSubcommand((subcommand) =>
       subcommand
+        .setName("dragon-grants")
+        .setDescription("Choose where special dragon grants are announced.")
+        .addChannelOption((option) => option
+          .setName("channel")
+          .setDescription("Channel where specially granted riders are pinged.")
+          .addChannelTypes(ChannelType.GuildText, ChannelType.GuildAnnouncement)
+          .setRequired(true)),
+    )
+    .addSubcommand((subcommand) =>
+      subcommand
         .setName("clear")
         .setDescription("Disable one or all onboarding settings.")
         .addStringOption((option) =>
@@ -200,6 +211,7 @@ export const setupCommand: Command = {
               { name: "Reaction logs", value: "reactionLogChannelId" },
               { name: "Chronicles channel", value: "chronicleChannelId" },
               { name: "Moderator role", value: "moderatorRoleId" },
+              { name: "Dragon grant channel", value: "dragonGrantChannelId" },
               { name: "All basic server settings", value: "all" },
             ),
         ),
@@ -280,6 +292,16 @@ export const setupCommand: Command = {
         content: `${role} is now required for Grey Ghost moderation commands and dragon creation. Members may have only one dragon each.
 
 ${settingsSummary(settings)}`,
+        flags: MessageFlags.Ephemeral,
+      });
+      return;
+    }
+
+    if (subcommand === "dragon-grants") {
+      const channel = interaction.options.getChannel("channel", true);
+      const settings = await updateGuildSettings(interaction.guildId, { dragonGrantChannelId: channel.id });
+      await interaction.reply({
+        content: `Special dragon grants will be announced in ${channel}. If Grey Ghost cannot post there, the recipient will be DM'd instead.\n\n${settingsSummary(settings)}`,
         flags: MessageFlags.Ephemeral,
       });
       return;

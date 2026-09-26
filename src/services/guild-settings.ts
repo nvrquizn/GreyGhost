@@ -395,6 +395,7 @@ export const guildSettingsSchema = z.object({
   statsMessageId: z.string().optional(),
   chronicleChannelId: z.string().optional(),
   moderatorRoleId: z.string().optional(),
+  dragonGrantChannelId: z.string().optional(),
   collectionSets: z.record(z.string(), collectionSetSchema).optional(),
   selfRolePanels: z
     .record(
