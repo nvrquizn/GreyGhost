@@ -57,6 +57,7 @@ export function renderHelp(member: GuildMember | null, isModmailStaff = false): 
           line("prize", "Claim pending Admirer-role event prizes."),
           line("race", "Enter or inspect a horse race."),
           line("hunt", "Go hunting for coin, Renown, and horse experience."),
+          line("tavern", "Play no-wager tavern mini-games for small fixed prizes."),
         ].join("\n"),
       },
       {
@@ -138,5 +139,5 @@ export function renderHelp(member: GuildMember | null, isModmailStaff = false): 
   }
 
   return embed
-    .setFooter({ text: "Version 0.26.1 · Slash and ? prefix commands" });
+    .setFooter({ text: "Version 0.27.0 · Slash and ? prefix commands" });
 }

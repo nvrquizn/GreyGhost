@@ -18,6 +18,45 @@ import {
 import { getGuildSettings } from "../services/guild-settings.js";
 
 const GHOST_PING_WINDOW_MS = 30_000;
+const MESSAGE_SNAPSHOT_LIMIT = 5_000;
+const MESSAGE_SNAPSHOT_MAX_AGE_MS = 24 * 60 * 60 * 1000;
+
+interface MessageSnapshot {
+  id: string;
+  guildId: string;
+  channelId: string;
+  authorId?: string;
+  authorTag?: string;
+  authorBot: boolean;
+  content: string;
+  attachmentLines: string[];
+  mentionedUserIds: string[];
+  createdTimestamp: number;
+}
+
+const messageSnapshots = new Map<string, MessageSnapshot>();
+
+function rememberMessage(message: Message): void {
+  if (!message.guild || message.author.bot) return;
+  messageSnapshots.set(message.id, {
+    id: message.id,
+    guildId: message.guild.id,
+    channelId: message.channel.id,
+    authorId: message.author.id,
+    authorTag: message.author.tag,
+    authorBot: message.author.bot,
+    content: message.content ?? "",
+    attachmentLines: message.attachments.map((attachment) => `[${attachment.name ?? "attachment"}](${attachment.url})`),
+    mentionedUserIds: [...message.mentions.users.keys()],
+    createdTimestamp: message.createdTimestamp,
+  });
+
+  const cutoff = Date.now() - MESSAGE_SNAPSHOT_MAX_AGE_MS;
+  for (const [id, snapshot] of messageSnapshots) {
+    if (snapshot.createdTimestamp < cutoff || messageSnapshots.size > MESSAGE_SNAPSHOT_LIMIT) messageSnapshots.delete(id);
+    else if (messageSnapshots.size <= MESSAGE_SNAPSHOT_LIMIT) break;
+  }
+}
 
 function shorten(value: string, limit: number): string {
   if (value.length <= limit) return value;
@@ -49,7 +88,7 @@ async function serverLogChannel(guild: Guild) {
   const channelId = settings.serverLogChannelId;
   if (!channelId) return null;
   const channel = await guild.channels.fetch(channelId).catch(() => null);
-  return channel?.type === ChannelType.GuildText ? channel : null;
+  return channel && (channel.type === ChannelType.GuildText || channel.type === ChannelType.GuildAnnouncement) ? channel : null;
 }
 
 async function sendLog(guild: Guild, embed: EmbedBuilder): Promise<void> {
@@ -122,28 +161,67 @@ async function notifyGhostPingTargets(message: Message | PartialMessage): Promis
 }
 
 async function logDeletedMessage(message: Message | PartialMessage): Promise<void> {
-  if (!message.guild || message.author?.bot) return;
-  const ghostPing = await notifyGhostPingTargets(message);
+  const snapshot = messageSnapshots.get(message.id);
+  messageSnapshots.delete(message.id);
+
+  const guild = message.guild ?? (message.channel && !message.channel.isDMBased() ? message.channel.guild : null);
+  if (!guild) return;
+  if (message.author?.bot || snapshot?.authorBot) return;
+
+  const channelId = message.channel.id || snapshot?.channelId;
+  const channelMention = channelId ? `<#${channelId}>` : "Unknown";
+  const authorId = message.author?.id ?? snapshot?.authorId;
+  const authorValue = authorId
+    ? `<@${authorId}>\n\`${authorId}\``
+    : snapshot?.authorTag
+      ? `${snapshot.authorTag}\n*User ID unavailable*`
+      : "Unknown or uncached";
+
+  const content = message.content?.trim() || snapshot?.content.trim() || "*No text content was available; the message may have contained only an embed, sticker, or attachment.*";
+  const attachmentLines = message.attachments.size
+    ? message.attachments.map((attachment) => `[${attachment.name ?? "attachment"}](${attachment.url})`)
+    : snapshot?.attachmentLines ?? [];
+
+  let ghostPingMembers: string[] = [];
+  let delivered = 0;
+  const createdAt = message.createdTimestamp || snapshot?.createdTimestamp || 0;
+  const authorForPing = message.author?.id ?? snapshot?.authorId;
+  const mentionIds = message.mentions?.users?.size
+    ? [...message.mentions.users.keys()]
+    : snapshot?.mentionedUserIds ?? [];
+
+  if (authorForPing && createdAt && Date.now() - createdAt <= GHOST_PING_WINDOW_MS) {
+    const targets = mentionIds.filter((id) => id !== authorForPing);
+    const users = (await Promise.all(targets.map((id) => guild.client.users.fetch(id).catch(() => null))))
+      .filter((user): user is User => Boolean(user && !user.bot));
+    ghostPingMembers = users.map((user) => `${user} (\`${user.id}\`)`);
+    const notice = shorten(content, 700);
+    const deliveries = await Promise.allSettled(users.map((user) => user.send({
+      content: `You were ghost-pinged by **${message.author?.tag ?? snapshot?.authorTag ?? "an unknown member"}** in ${channelMention}. Their message was deleted within 30 seconds.\n\n> ${notice.replace(/\n/g, "\n> ")}`,
+      allowedMentions: { parse: [] },
+    })));
+    delivered = deliveries.filter((result) => result.status === "fulfilled").length;
+  }
+
   const embed = new EmbedBuilder()
-    .setColor(ghostPing.members.length ? 0xd48a3a : 0x8f4b4b)
-    .setTitle(ghostPing.members.length ? "Message deleted · Ghost ping detected" : "Message deleted")
-    .setDescription(messageContent(message))
+    .setColor(ghostPingMembers.length ? 0xd48a3a : 0x8f4b4b)
+    .setTitle(ghostPingMembers.length ? "Message deleted · Ghost ping detected" : "Message deleted")
+    .setDescription(shorten(content, 1_000))
     .addFields(
-      { name: "Author", value: message.author ? `${message.author}\n\`${message.author.id}\`` : "Unknown or uncached", inline: true },
-      { name: "Channel", value: `${message.channel}\n\`${message.channel.id}\``, inline: true },
+      { name: "Author", value: authorValue, inline: true },
+      { name: "Channel", value: `${channelMention}\n\`${channelId ?? "unknown"}\``, inline: true },
       { name: "Message ID", value: `\`${message.id}\``, inline: true },
     )
     .setTimestamp();
 
-  const attachments = attachmentSummary(message);
-  if (attachments) embed.addFields({ name: "Attachments", value: attachments });
-  if (ghostPing.members.length) {
+  if (attachmentLines.length) embed.addFields({ name: "Attachments", value: shorten(attachmentLines.join("\n"), 1_000) });
+  if (ghostPingMembers.length) {
     embed.addFields({
-      name: `Ghost-pinged member${ghostPing.members.length === 1 ? "" : "s"}`,
-      value: shorten(`${ghostPing.members.join("\n")}\nDM delivered to ${ghostPing.delivered}/${ghostPing.members.length}.`, 1_000),
+      name: `Ghost-pinged member${ghostPingMembers.length === 1 ? "" : "s"}`,
+      value: shorten(`${ghostPingMembers.join("\n")}\nDM delivered to ${delivered}/${ghostPingMembers.length}.`, 1_000),
     });
   }
-  await sendLog(message.guild, embed);
+  await sendLog(guild, embed);
 }
 
 async function logEditedMessage(oldMessage: Message | PartialMessage, newMessage: Message): Promise<void> {
@@ -362,6 +440,10 @@ async function logRoleUpdate(oldRole: Role, newRole: Role): Promise<void> {
 }
 
 export function registerServerLogEvents(client: Client): void {
+  client.on(Events.MessageCreate, (message) => {
+    rememberMessage(message);
+  });
+
   client.on(Events.MessageDelete, (message) => {
     void logDeletedMessage(message).catch((error) => console.error("Could not log a deleted message:", error));
   });

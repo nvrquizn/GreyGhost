@@ -451,3 +451,9 @@ Expeditions now keep a live text status in-channel showing the party and choice 
 - Dragonriders may create one dragon per person; retired dragons return to their original rider if that rider rejoins the moderator role.
 - Server managers can add manual growth days with `/dragon growth`, advancing both age and feeding growth progress.
 - Retired dragons remain historical records and cannot be reassigned to another rider.
+
+## v0.27.0 — Tavern
+
+Grey Ghost includes no-wager tavern mini-games through `/tavern`: dice, darts, the three cups, and persistent tavern statistics. Games award only small fixed coin prizes with per-game cooldowns and a daily reward cap; they do not award Renown.
+
+Deleted-message server logging was also hardened in this release with recent-message snapshots and partial-message fallbacks.

@@ -65,6 +65,7 @@ import { heirloomCommand } from "./heirloom.js";
 import { prizeCommand } from "./prize.js";
 import { raceCommand } from "./race.js";
 import { huntCommand } from "./hunt.js";
+import { tavernCommand } from "./tavern.js";
 
 export const commands: Command[] = [
   pingCommand,
@@ -132,6 +133,7 @@ export const commands: Command[] = [
   prizeCommand,
   raceCommand,
   huntCommand,
+  tavernCommand,
 ];
 
 export const commandMap = new Map(

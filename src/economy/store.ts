@@ -209,6 +209,17 @@ export async function equipItem(guildId: string, userId: string, itemId: string)
   });
 }
 
+export async function awardCoins(guildId: string, targetId: string, amount: number, reason: string): Promise<EconomyPlayer> {
+  if (!Number.isSafeInteger(amount) || amount < 1) throw new Error("INVALID_AMOUNT");
+  return mutate((data) => {
+    const player = ensurePlayer(data, guildId, targetId);
+    player.coins += amount;
+    player.coinHistory.push({ amount, reason, createdAt: Date.now() });
+    player.coinHistory = player.coinHistory.slice(-100);
+    return player;
+  });
+}
+
 export async function grantCoins(guildId: string, targetId: string, amount: number, staffId: string, reason = "Staff grant"): Promise<EconomyPlayer> {
   if (!Number.isSafeInteger(amount) || amount < 1) throw new Error("INVALID_AMOUNT");
   return mutate((data) => {
