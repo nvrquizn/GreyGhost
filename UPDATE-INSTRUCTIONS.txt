@@ -1,4 +1,4 @@
-GREY GHOST v0.29.0 — SAFE REPLACEMENT
+GREY GHOST v0.29.1 — SAFE REPLACEMENT
 
 1. Keep your existing live/local files and folders:
    - .env
@@ -20,9 +20,12 @@ GREY GHOST v0.29.0 — SAFE REPLACEMENT
    /setup event-channel channel:#your-event-announcement-channel
    /setup event-chat channel:#your-event-chat
 
-5. If npm run check succeeds, commit and push:
+5. Optional: configure a welcome GIF:
+   /setup welcome-gif url:<your-discord-or-tenor-link>
+
+6. If npm run check succeeds, commit and push:
    git add .
-   git commit -m "Release Grey Ghost v0.29.0"
+   git commit -m "Release Grey Ghost v0.29.1"
    git push
 
 Railway should redeploy after the push.

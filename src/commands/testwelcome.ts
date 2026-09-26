@@ -17,7 +17,7 @@ export const testWelcomeCommand: Command = {
       await interaction.reply({ content: "Configure onboarding with `/setup onboarding` first.", flags: MessageFlags.Ephemeral });
       return;
     }
-    const sent = await sendWelcomeMessage(interaction.member, settings.welcomeChannelId);
+    const sent = await sendWelcomeMessage(interaction.member, settings.welcomeChannelId, settings.welcomeGifUrl);
     await interaction.reply({
       content: sent
         ? `A test welcome was posted in <#${settings.welcomeChannelId}>. No role was assigned and no join log was created.`

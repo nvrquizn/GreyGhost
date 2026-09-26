@@ -53,11 +53,12 @@ function departureRoles(member: GuildMember | PartialGuildMember): string {
   return roles.length ? shorten(roles.join(", "), 1_000) : "None";
 }
 
-export async function sendWelcomeMessage(member: GuildMember, channelId?: string): Promise<boolean> {
+export async function sendWelcomeMessage(member: GuildMember, channelId?: string, gifUrl?: string): Promise<boolean> {
   const channel = await fetchTextChannel(member.client, channelId);
   if (!channel) return false;
+  const welcomeText = `${member} has entered the gates of King's Landing.`;
   await channel.send({
-    content: `${member} has entered the gates of King's Landing.`,
+    content: gifUrl ? `${welcomeText}\n${gifUrl}` : welcomeText,
     allowedMentions: { users: [member.id] },
   });
   return true;
@@ -134,7 +135,7 @@ export function registerMemberEvents(client: Client): void {
         });
       }
 
-      await sendWelcomeMessage(member, settings.welcomeChannelId).catch((error) => {
+      await sendWelcomeMessage(member, settings.welcomeChannelId, settings.welcomeGifUrl).catch((error) => {
         console.error(`Could not send welcome in ${member.guild.id}:`, error);
       });
 

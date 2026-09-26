@@ -26,6 +26,7 @@ function diagnosticList(items: string[], empty: string): string {
 function settingsSummary(settings: GuildSettings): string {
   return [
     `**Welcome channel:** ${settings.welcomeChannelId ? `<#${settings.welcomeChannelId}>` : "Not configured"}`,
+    `**Welcome GIF:** ${settings.welcomeGifUrl ? "Configured" : "Not configured"}`,
     `**Join/leave log:** ${settings.logChannelId ? `<#${settings.logChannelId}>` : "Not configured"}`,
     `**Newcomer role:** ${settings.newcomerRoleId ? `<@&${settings.newcomerRoleId}>` : "Not configured"}`,
     `**Governance:** ${settings.governance ? `petitions <#${settings.governance.petitionChannelId}> · council <#${settings.governance.councilChannelId}> · voters <@&${settings.governance.councilRoleId}> · applications <#${settings.governance.staffApplicationChannelId}>` : "Not configured"}`,
@@ -74,6 +75,23 @@ export const setupCommand: Command = {
             .setDescription("The role automatically given to new members, such as Smallfolk.")
             .setRequired(true),
         ),
+    )
+    .addSubcommand((subcommand) =>
+      subcommand
+        .setName("welcome-gif")
+        .setDescription("Set the GIF or animated image shown with public welcome messages.")
+        .addStringOption((option) =>
+          option
+            .setName("url")
+            .setDescription("A Discord attachment/CDN or Tenor URL.")
+            .setRequired(true)
+            .setMaxLength(1500),
+        ),
+    )
+    .addSubcommand((subcommand) =>
+      subcommand
+        .setName("welcome-gif-clear")
+        .setDescription("Remove the configured welcome GIF."),
     )
     .addSubcommand((subcommand) =>
       subcommand
@@ -227,6 +245,7 @@ export const setupCommand: Command = {
             .setRequired(true)
             .addChoices(
               { name: "Welcome channel", value: "welcomeChannelId" },
+              { name: "Welcome GIF", value: "welcomeGifUrl" },
               { name: "Join/leave log", value: "logChannelId" },
               { name: "Newcomer role", value: "newcomerRoleId" },
               {
@@ -259,6 +278,44 @@ export const setupCommand: Command = {
     }
 
     const subcommand = interaction.options.getSubcommand();
+
+    if (subcommand === "welcome-gif") {
+      const rawUrl = interaction.options.getString("url", true).trim();
+      let parsed: URL;
+      try {
+        parsed = new URL(rawUrl);
+      } catch {
+        await interaction.reply({
+          content: "That does not look like a valid URL. Paste the Discord attachment/CDN or Tenor link again.",
+          flags: MessageFlags.Ephemeral,
+        });
+        return;
+      }
+
+      if (parsed.protocol !== "https:" && parsed.protocol !== "http:") {
+        await interaction.reply({
+          content: "The welcome GIF must use an `http://` or `https://` URL.",
+          flags: MessageFlags.Ephemeral,
+        });
+        return;
+      }
+
+      const settings = await updateGuildSettings(interaction.guildId, { welcomeGifUrl: rawUrl });
+      await interaction.reply({
+        content: `Welcome GIF configured. Grey Ghost will include it beneath the public welcome message.\n\n${settingsSummary(settings)}`,
+        flags: MessageFlags.Ephemeral,
+      });
+      return;
+    }
+
+    if (subcommand === "welcome-gif-clear") {
+      const settings = await clearGuildSetting(interaction.guildId, "welcomeGifUrl");
+      await interaction.reply({
+        content: `Welcome GIF cleared. Public welcome messages will return to text only.\n\n${settingsSummary(settings)}`,
+        flags: MessageFlags.Ephemeral,
+      });
+      return;
+    }
 
     if (subcommand === "check") {
       await interaction.deferReply({ flags: MessageFlags.Ephemeral });

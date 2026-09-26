@@ -458,10 +458,15 @@ Grey Ghost includes no-wager tavern mini-games through `/tavern`: dice, darts, t
 
 Deleted-message server logging was also hardened in this release with recent-message snapshots and partial-message fallbacks.
 
-## v0.29.0 — Seasonal Festivals
+## v0.29.0 — House Chronicles & Profile Achievements
 
 Grey Ghost can now host temporary server-wide festivals with `/festival`. Staff create and publish a named festival, while members join from the configured event chat, earn Festival Points through normal Realm activities, complete temporary objectives, collect Festival Tokens, and spend those tokens on permanent seasonal keepsakes.
 
 Festival activity integrates with duels, hunts, tavern wins, expeditions, horse races, jousts, and grand melees. Race/joust/melee podiums contribute extra Festival Points while a festival is active. Bonded dragons may attend for history and atmosphere, but dragon attendance awards no competitive points.
 
 When the festival ends, Grey Ghost records the final standings, grants the configured Champions role to the top three, applies the existing Admirer prize system, grants permanent Renown, and keeps the result available in `/festival history`. Backup format v8 includes all festival state.
+
+
+## v0.29.1 — Welcome GIFs
+
+Grey Ghost can now include a configured Discord attachment/CDN or Tenor GIF URL beneath every public welcome message. Configure it with `/setup welcome-gif url:<link>` and remove it with `/setup welcome-gif-clear`. `/testwelcome` previews the GIF too, and `/setup view` reports whether a welcome GIF is configured without exposing the stored URL.

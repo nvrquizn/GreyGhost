@@ -422,6 +422,7 @@ const eventPrizePackageSchema = z.object({
 
 export const guildSettingsSchema = z.object({
   welcomeChannelId: z.string().optional(),
+  welcomeGifUrl: z.string().max(1500).optional(),
   logChannelId: z.string().optional(),
   newcomerRoleId: z.string().optional(),
   suggestionChannelId: z.string().optional(),
@@ -565,6 +566,7 @@ export async function clearGuildSetting(
   if (target === "all") {
     const current = { ...settings[guildId] };
     delete current.welcomeChannelId;
+    delete current.welcomeGifUrl;
     delete current.logChannelId;
     delete current.newcomerRoleId;
     delete current.suggestionChannelId;

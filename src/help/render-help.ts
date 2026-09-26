@@ -141,5 +141,5 @@ export function renderHelp(member: GuildMember | null, isModmailStaff = false): 
   }
 
   return embed
-    .setFooter({ text: "Version 0.29.0 · Slash and ? prefix commands" });
+    .setFooter({ text: "Version 0.29.1 · Slash and ? prefix commands" });
 }
