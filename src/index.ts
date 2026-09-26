@@ -24,6 +24,8 @@ import { registerReactionEvents } from "./events/reaction-events.js";
 import { registerServerLogEvents } from "./events/server-log-events.js";
 import { registerInviteTracking } from "./events/invite-tracking.js";
 import { registerReminderRuntime } from "./reminders/runtime.js";
+import { registerGovernanceInteractions } from "./governance/runtime.js";
+import { registerEventManagerInteractions } from "./events-manager/runtime.js";
 
 const client = new Client({
   intents: [
@@ -53,6 +55,8 @@ registerReactionEvents(client);
 registerServerLogEvents(client);
 registerInviteTracking(client);
 registerReminderRuntime(client);
+registerGovernanceInteractions(client);
+registerEventManagerInteractions(client);
 
 client.once(Events.ClientReady, (readyClient) => {
   readyClient.user.setActivity("the mists of Dragonstone", {

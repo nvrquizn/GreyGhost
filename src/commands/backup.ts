@@ -77,7 +77,7 @@ export const backupCommand: Command = {
 
       await interaction.editReply({
         content:
-          "Backup created. Keep this file private: it contains server configuration and suggestion-vote user IDs.",
+          "Backup created. Keep this file private: it contains server configuration, petition votes, council records, and staff applications.",
         files: [file],
       });
       return;

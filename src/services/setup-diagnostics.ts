@@ -40,7 +40,9 @@ export async function diagnoseGuildSetup(guild: Guild): Promise<SetupDiagnostics
   const channelSettings: Array<[string, string | undefined]> = [
     ["Welcome channel", settings.welcomeChannelId],
     ["Join/leave log", settings.logChannelId],
-    ["Suggestions channel", settings.suggestionChannelId],
+    ["Petitions channel", settings.governance?.petitionChannelId ?? settings.suggestionChannelId],
+    ["Council proposals channel", settings.governance?.councilChannelId],
+    ["Staff applications channel", settings.governance?.staffApplicationChannelId],
     ["Collection announcements", settings.collectionAnnouncementChannelId],
     ["Server logs", settings.serverLogChannelId],
     ["Reaction logs", settings.reactionLogChannelId],
@@ -65,7 +67,7 @@ export async function diagnoseGuildSetup(guild: Guild): Promise<SetupDiagnostics
       PermissionFlagsBits.SendMessages,
       PermissionFlagsBits.EmbedLinks,
     ];
-    if (label === "Suggestions channel") required.push(PermissionFlagsBits.AttachFiles);
+    if (label === "Petitions channel") required.push(PermissionFlagsBits.AttachFiles);
 
     const missing = required.filter((permission) => !permissions?.has(permission));
     if (missing.length) {
@@ -73,6 +75,15 @@ export async function diagnoseGuildSetup(guild: Guild): Promise<SetupDiagnostics
     } else {
       result.passed.push(`${label} is reachable and writable.`);
     }
+  }
+
+  if (settings.governance) {
+    const councilRole = guild.roles.cache.get(settings.governance.councilRoleId);
+    if (!councilRole) result.errors.push("The configured council/staff voting role was deleted.");
+    else if (councilRole.id === guild.roles.everyone.id) result.errors.push("The council/staff voting role cannot be @everyone.");
+    else result.passed.push("The council/staff voting role is available.");
+  } else {
+    result.warnings.push("Petitions, council proposals, and staff applications are not configured.");
   }
 
   if (!settings.newcomerRoleId) {

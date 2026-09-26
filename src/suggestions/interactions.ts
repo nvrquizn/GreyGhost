@@ -8,7 +8,7 @@ import { renderSuggestion } from "./render-suggestion.js";
 
 export function registerSuggestionInteractions(client: Client): void {
   client.on(Events.InteractionCreate, async (interaction) => {
-    if (!interaction.isButton() || !interaction.customId.startsWith("suggestion:")) return;
+    if (!interaction.isButton() || (!interaction.customId.startsWith("petition:") && !interaction.customId.startsWith("suggestion:"))) return;
 
     const [, vote, suggestionId] = interaction.customId.split(":");
     if ((vote !== "up" && vote !== "down") || !suggestionId) return;
@@ -21,12 +21,12 @@ export function registerSuggestionInteractions(client: Client): void {
     );
 
     if (!suggestion) {
-      await interaction.editReply("That suggestion is no longer available.");
+      await interaction.editReply("That petition is no longer available.");
       return;
     }
 
     if (!isSuggestionVotingOpen(suggestion.status)) {
-      await interaction.editReply(`Voting is closed because this suggestion is **${suggestion.status}**.`);
+      await interaction.editReply(`Voting is closed because this petition is **${suggestion.status}**.`);
       return;
     }
 

@@ -24,7 +24,7 @@ export function renderSuggestion(suggestion: Suggestion) {
   const votingOpen = isSuggestionVotingOpen(suggestion.status);
   const embed = new EmbedBuilder()
     .setColor(status.color)
-    .setTitle(`Suggestion · ${status.label}`)
+    .setTitle(`Petition · ${status.label}`)
     .setDescription(suggestion.body)
     .addFields(
       { name: "Submitter", value: `<@${suggestion.authorId}>`, inline: true },
@@ -35,7 +35,7 @@ export function renderSuggestion(suggestion: Suggestion) {
       },
     )
     .setThumbnail(suggestion.authorAvatarUrl)
-    .setFooter({ text: `Suggestion ID: ${suggestion.id}` })
+    .setFooter({ text: `Petition ID: ${suggestion.id}` })
     .setTimestamp(suggestion.createdAt);
 
   if (suggestion.staffResponse) {
@@ -50,13 +50,13 @@ export function renderSuggestion(suggestion: Suggestion) {
 
   const row = new ActionRowBuilder<MessageActionRowComponentBuilder>().addComponents(
     new ButtonBuilder()
-      .setCustomId(`suggestion:up:${suggestion.id}`)
+      .setCustomId(`petition:up:${suggestion.id}`)
       .setEmoji("✅")
       .setLabel(suggestion.upvotes.length.toString())
       .setStyle(ButtonStyle.Secondary)
       .setDisabled(!votingOpen),
     new ButtonBuilder()
-      .setCustomId(`suggestion:down:${suggestion.id}`)
+      .setCustomId(`petition:down:${suggestion.id}`)
       .setEmoji("❌")
       .setLabel(suggestion.downvotes.length.toString())
       .setStyle(ButtonStyle.Secondary)

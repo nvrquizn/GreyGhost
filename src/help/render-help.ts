@@ -1,6 +1,7 @@
 import { EmbedBuilder, PermissionFlagsBits, type GuildMember } from "discord.js";
 
 const line = (name: string, description: string): string => `\`/${name}\` · \`?${name}\` — ${description}`;
+const slashLine = (name: string, description: string): string => `\`/${name}\` — ${description}`;
 
 export function renderHelp(member: GuildMember | null, isModmailStaff = false): EmbedBuilder {
   const permissions = member?.permissions;
@@ -30,7 +31,8 @@ export function renderHelp(member: GuildMember | null, isModmailStaff = false): 
           line("rolemembers", "List members who have a selected role."),
           line("whohas", "Find members with a selected permission."),
           line("spoiler", "Post concealed spoiler text."),
-          line("suggest", "Submit a server suggestion."),
+          line("petition submit", "Submit an idea for a public Realm vote."),
+          slashLine("staffapply", "Open the private staff application form."),
         ].join("\n"),
       },
       {
@@ -49,6 +51,7 @@ export function renderHelp(member: GuildMember | null, isModmailStaff = false): 
   if (eventManager) embed.addFields({
     name: "Events",
     value: [
+      line("event", "Create and manage events with RSVP tracking."),
       line("quiz", "Create and host live quizzes."),
       line("joust", "Create, publish, and run jousting tournaments."),
     ].join("\n"),
@@ -62,6 +65,7 @@ export function renderHelp(member: GuildMember | null, isModmailStaff = false): 
     line("directory", "Manage directory entries."),
     line("stats", "Publish or refresh the statistics dashboard."),
     line("housepoints", "Award or deduct audited House Points."),
+    line("petition status", "Make the final decision on a petition (owner only)."),
   );
   if (roleManager) staffTools.push(
     line("selfroles", "Configure and publish self-role panels."),
@@ -69,7 +73,6 @@ export function renderHelp(member: GuildMember | null, isModmailStaff = false): 
   );
   if (messageManager) staffTools.push(
     line("embed", "Publish a formatted information embed."),
-    line("suggestion status", "Review and resolve suggestions."),
   );
   if (staffTools.length) embed.addFields({ name: "Staff Tools", value: staffTools.join("\n").slice(0, 1024) });
 
@@ -93,6 +96,7 @@ export function renderHelp(member: GuildMember | null, isModmailStaff = false): 
     line("unlock", "Unlock the current channel."),
   );
   if (isModmailStaff || manager) moderation.push(line("modmail", "Manage the current private ticket."));
+  if (isModmailStaff || manager) moderation.push(line("council propose", "Submit a private council proposal."));
   if (moderation.length) {
     embed.addFields({ name: "Moderation", value: moderation.slice(0, 7).join("\n") });
     if (moderation.length > 7) {
@@ -101,5 +105,5 @@ export function renderHelp(member: GuildMember | null, isModmailStaff = false): 
   }
 
   return embed
-    .setFooter({ text: "Version 0.17.0 · Slash and ? prefix commands" });
+    .setFooter({ text: "Version 0.18.0 · Slash and ? prefix commands" });
 }

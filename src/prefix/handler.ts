@@ -315,6 +315,9 @@ function prefixInteraction(
       return responseMessage;
     },
     followUp: async (payload: unknown) => send(payload, isEphemeral(payload) || privateResponse),
+    showModal: async () => {
+      await message.reply("Discord forms can only be opened with the slash version: `/staffapply`.");
+    },
   } as unknown as ChatInputCommandInteraction<"cached">;
   Object.defineProperties(interaction, {
     deferred: { get: () => deferred },

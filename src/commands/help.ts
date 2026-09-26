@@ -14,7 +14,10 @@ export const helpCommand: Command = {
       return;
     }
     const settings = await getGuildSettings(interaction.guildId);
-    const isModmailStaff = Boolean(settings.modmail?.staffRoleId && interaction.member.roles.cache.has(settings.modmail.staffRoleId));
-    await interaction.reply({ embeds: [renderHelp(interaction.member, isModmailStaff)], flags: MessageFlags.Ephemeral });
+    const isStaff = Boolean(
+      (settings.modmail?.staffRoleId && interaction.member.roles.cache.has(settings.modmail.staffRoleId))
+      || (settings.governance?.councilRoleId && interaction.member.roles.cache.has(settings.governance.councilRoleId)),
+    );
+    await interaction.reply({ embeds: [renderHelp(interaction.member, isStaff)], flags: MessageFlags.Ephemeral });
   },
 };

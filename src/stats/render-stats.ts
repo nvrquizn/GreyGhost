@@ -161,9 +161,9 @@ export async function renderServerStats(guild: Guild): Promise<EmbedBuilder> {
     implemented: suggestions.filter((suggestion) => suggestion.status === "implemented").length,
   };
   embed.addFields({
-    name: "Suggestions",
+    name: "Petitions",
     value: [
-      `**Submitted:** ${plural(suggestions.length, "suggestion")}`,
+      `**Submitted:** ${plural(suggestions.length, "petition")}`,
       `**Pending:** ${statuses.pending}`,
       `**Considering:** ${statuses.considering}`,
       `**Accepted:** ${statuses.accepted}`,

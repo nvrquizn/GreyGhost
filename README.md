@@ -23,7 +23,8 @@ current build supports both slash commands and role-aware `?` prefix commands.
   automatic newcomer role
 - `/setup view` — displays the current server configuration
 - `/setup clear` — disables selected onboarding settings
-- `/setup suggestions` — chooses where `/suggest` submissions are posted
+- `/setup governance` — configures public petitions, private council proposals,
+  the council/staff voting role, and the staff-application channel
 - `/setup collections` — chooses where newly earned collection titles are announced
 - `/setup check` — checks configured channels, permissions, panels, and title roles
 - `/setup modmail` — configures the private ticket category, staff role, and transcript log
@@ -37,9 +38,13 @@ current build supports both slash commands and role-aware `?` prefix commands.
 - `/selfroles publish` — publishes or updates a persistent role panel
 - `/selfroles view` and `/selfroles clear` — inspect or reset a panel
 - `/embed` — publishes a formatted information embed with an optional banner
-- `/suggest` — posts a suggestion with up to four images and persistent voting
-- `/suggestion status` — marks suggestions as considering, accepted, denied,
-  implemented, or reopened, with an optional staff response
+- `/petition submit` — posts a public petition with up to four images and persistent voting
+- `/petition status` — server-owner-only final review: considering, accepted,
+  denied, implemented, or reopened, with an optional response
+- `/council propose` — council-role-only proposals and private advisory voting
+- `/staffapply` — opens a private five-question staff application form
+- `/event create`, `/event status`, `/event complete`, and `/event cancel` —
+  event publishing and Going/Interested/Cannot Attend tracking
 - `/collection progress` — shows progress toward configured collection titles
 - `/collection configure` — configures all-of or X-of-Y automatic title requirements
 - `/collection view`, `/collection remove`, and `/collection sync` — manage titles
@@ -48,7 +53,7 @@ current build supports both slash commands and role-aware `?` prefix commands.
 - `/profile edit`, `/profile wishlist`, and `/profile clear` — customize personal
   profile details and desired admirer roles
 - `/stats view` — displays current member, allegiance, admirer, title, profile,
-  and suggestion statistics
+  and petition statistics
 - `/stats publish` and `/stats refresh` — manage a dashboard that automatically
   refreshes every 15 minutes
 - `/housepoints standings` and `/housepoints history` — show the Great Houses'
@@ -108,19 +113,44 @@ allows any number of notification roles. Published panels can recover their
 configuration from their Discord buttons if the local data file is missing
 after an update, so existing role buttons continue working.
 
-## Suggestions and collections
+## Petitions, council, and staff applications
 
-Suggestion votes are stored across restarts, allow one vote per member, and can
-be switched or removed by pressing the same button again. Staff decisions
-recolour the original suggestion embed; resolved suggestions lock voting, while
-reopened suggestions restore it. Collection titles are
+Petition votes are stored across restarts, allow one vote per member, and can
+be switched or removed by pressing the same button again. Owner decisions
+recolour the original petition embed; resolved petitions lock voting, while
+reopened petitions restore it. Existing suggestion records are retained and
+displayed as petitions after updating.
+
+Council proposals are posted only in the configured private council channel.
+Members with the configured council role may vote yes or no, but those totals
+are advisory: accept and deny buttons work only for the Discord server owner.
+
+`/staffapply` opens a private form covering motivation, experience, availability,
+strengths, and additional information. Finished forms are posted and permanently
+updated in the configured staff-application channel. Council/staff members may
+vote yes or no (applicants cannot vote on themselves), while the final accept or
+deny buttons work only for the server owner. The applicant receives a private
+decision notice when possible.
+
+## Event manager
+
+Members with **Manage Events** may publish an event using a compact start time
+such as `30m`, `2h`, `7d`, or `4w`. Members can switch between Going,
+Interested, and Cannot Attend, or remove their response by pressing the selected
+button again. Hosts and server managers can privately inspect RSVP lists and
+close the buttons by completing or cancelling the event.
+
+## Collections
+
+Collection titles are
 granted and removed automatically when member roles change. Title roles can be
 used as requirements for milestone titles, allowing chained rewards such as
 Lord Paramount and Protector of the Realm. Newly earned titles can be announced
 in a configured channel, with chained rewards combined into one announcement.
 
 Backups contain the server's Grey Ghost settings, self-role panels, collection
-requirements, member profiles, wishlists, suggestions, and suggestion votes. They never include the bot
+requirements, member profiles, wishlists, petitions and votes, council proposals,
+staff applications and votes, events and RSVPs. They never include the bot
 token or `.env` file. Restores are validated and restricted to the Discord
 server that created the backup.
 
@@ -130,7 +160,7 @@ remove a role after the member receives it.
 
 The statistics dashboard tracks people and bots, House and Dance allegiances,
 popular admirer roles, commonly earned titles, title collectors, saved member
-profiles, suggestion statuses, and live House Point standings. It recreates its
+profiles, petition statuses, and live House Point standings. It recreates its
 message if the published dashboard is deleted.
 
 House Points can only be assigned to roles configured in the House Allegiance
@@ -190,6 +220,9 @@ containing spaces may be placed in quotation marks. For example:
 ```text
 ?profile view @member
 ?remindme set 2h "Check the event sign-ups"
+?petition submit "Add an ASOIAF reread night"
+?council propose "New event format" "Use House teams for the next event"
+?event create "House Trivia" 2d "A live team trivia night"
 ?userinfo @member
 ?whohas manage-events
 ?spoiler "A concealed message"

@@ -1,16 +1,16 @@
-GREY GHOST v0.17.0 — SAFE REPLACEMENT PACKAGE
+GREY GHOST v0.18.0 — SAFE REPLACEMENT PACKAGE
 
 This package contains the complete bot source code, so it can safely restore a
-src folder while installing the reminder and utility-command update.
+src folder while installing the event and governance update.
 
 1. Extract this ZIP.
-2. Open the extracted Grey-Ghost-v0.17.0-safe-replacement folder.
+2. Open the extracted Grey-Ghost-v0.18.0-safe-replacement folder.
 3. Select src, package.json, package-lock.json, tsconfig.json, and README.md.
 4. Drag them directly into the TOP LEVEL of your existing Grey Ghost bot folder.
 5. Choose Replace for the matching src folder and files.
 
 Choosing Replace for src is safe with THIS package because its src folder is
-complete. It contains all earlier files and the v0.17.0 additions.
+complete. It contains all earlier files and the v0.18.0 additions.
 
 The paths must remain exactly as shown. For example:
 
@@ -38,18 +38,24 @@ latest commit from Railway.
 Message Content Intent must remain enabled in the Discord Developer Portal for
 modmail and ? prefix commands.
 
-The v0.17.0 commands are:
+The v0.18.0 commands are:
 
-  /remindme set, list, cancel
-  /userinfo
-  /serverinfo
-  /rolemembers
-  /whohas
-  /spoiler
+  /petition submit, status
+  /council propose
+  /staffapply
+  /event create, status, complete, cancel
 
-Each is also available with the ? prefix. Reminder durations use forms such as
-30m, 2h, 7d, or 4w. Run npm run commands:deploy so Discord receives the new
-slash commands.
+The message-based commands are also available with the ? prefix. Staff
+applications use a Discord form, so that one must be opened with /staffapply.
+Run npm run commands:deploy so Discord receives the renamed and new commands.
+
+After deployment, the server owner must run:
+
+  /setup governance
+
+Choose the public petitions channel, private council channel, council/staff
+voting role, and private staff-application channel. Only the Discord server
+owner can use final accept/deny controls; staff votes remain advisory.
 
 Configure the main server log after deployment with:
 

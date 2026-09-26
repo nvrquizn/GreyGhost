@@ -5,10 +5,8 @@ import { pingCommand } from "./ping.js";
 import { setupCommand } from "./setup.js";
 import { selfRolesCommand } from "./selfroles.js";
 import { embedCommand } from "./embed.js";
-import { suggestCommand } from "./suggest.js";
 import { collectionCommand } from "./collection.js";
 import { backupCommand } from "./backup.js";
-import { suggestionCommand } from "./suggestion.js";
 import { profileCommand } from "./profile.js";
 import { statsCommand } from "./stats.js";
 import { housePointsCommand } from "./housepoints.js";
@@ -37,6 +35,10 @@ import {
   whoHasCommand,
 } from "./information.js";
 import { spoilerCommand } from "./spoiler.js";
+import { petitionCommand } from "./petition.js";
+import { councilCommand } from "./council.js";
+import { staffApplyCommand } from "./staffapply.js";
+import { eventCommand } from "./event.js";
 
 export const commands: Command[] = [
   pingCommand,
@@ -45,10 +47,8 @@ export const commands: Command[] = [
   setupCommand,
   selfRolesCommand,
   embedCommand,
-  suggestCommand,
   collectionCommand,
   backupCommand,
-  suggestionCommand,
   profileCommand,
   statsCommand,
   housePointsCommand,
@@ -76,6 +76,10 @@ export const commands: Command[] = [
   roleMembersCommand,
   whoHasCommand,
   spoilerCommand,
+  petitionCommand,
+  councilCommand,
+  staffApplyCommand,
+  eventCommand,
 ];
 
 export const commandMap = new Map(

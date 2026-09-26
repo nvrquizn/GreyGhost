@@ -45,6 +45,71 @@ const reminderSchema = z.object({
   createdAt: z.number().int().positive(),
 });
 
+const councilProposalSchema = z.object({
+  id: z.number().int().positive(),
+  authorId: z.string(),
+  title: z.string().min(1).max(100),
+  body: z.string().min(1).max(3000),
+  channelId: z.string(),
+  messageId: z.string(),
+  yesVotes: z.array(z.string()).max(500),
+  noVotes: z.array(z.string()).max(500),
+  status: z.enum(["pending", "accepted", "denied"]),
+  createdAt: z.number().int().positive(),
+  decidedAt: z.number().int().positive().optional(),
+});
+
+const staffApplicationSchema = z.object({
+  id: z.number().int().positive(),
+  applicantId: z.string(),
+  applicantName: z.string().min(1).max(100),
+  applicantAvatarUrl: z.string().url(),
+  motivation: z.string().min(1).max(1000),
+  experience: z.string().min(1).max(1000),
+  availability: z.string().min(1).max(500),
+  strengths: z.string().min(1).max(1000),
+  additional: z.string().max(1000).optional(),
+  channelId: z.string(),
+  messageId: z.string(),
+  yesVotes: z.array(z.string()).max(500),
+  noVotes: z.array(z.string()).max(500),
+  status: z.enum(["pending", "accepted", "denied"]),
+  createdAt: z.number().int().positive(),
+  decidedAt: z.number().int().positive().optional(),
+});
+
+const governanceSchema = z.object({
+  petitionChannelId: z.string(),
+  councilChannelId: z.string(),
+  councilRoleId: z.string(),
+  staffApplicationChannelId: z.string(),
+  nextProposalNumber: z.number().int().positive().default(1),
+  proposals: z.record(z.string(), councilProposalSchema).default({}),
+  nextApplicationNumber: z.number().int().positive().default(1),
+  applications: z.record(z.string(), staffApplicationSchema).default({}),
+});
+
+const realmEventSchema = z.object({
+  id: z.number().int().positive(),
+  title: z.string().min(1).max(100),
+  description: z.string().min(1).max(3000),
+  location: z.string().max(100).optional(),
+  hostId: z.string(),
+  channelId: z.string(),
+  messageId: z.string(),
+  startsAt: z.number().int().positive(),
+  status: z.enum(["open", "completed", "cancelled"]),
+  going: z.array(z.string()).max(2000),
+  interested: z.array(z.string()).max(2000),
+  declined: z.array(z.string()).max(2000),
+  createdAt: z.number().int().positive(),
+});
+
+const eventsSchema = z.object({
+  nextEventNumber: z.number().int().positive().default(1),
+  entries: z.record(z.string(), realmEventSchema).default({}),
+});
+
 const housePointTransactionSchema = z.object({
   id: z.string(),
   houseRoleId: z.string(),
@@ -279,6 +344,8 @@ export const guildSettingsSchema = z.object({
   memberProfiles: z.record(z.string(), memberProfileSchema).optional(),
   memberInviteRecords: z.record(z.string(), memberInviteRecordSchema).optional(),
   reminders: z.record(z.string(), reminderSchema).optional(),
+  governance: governanceSchema.optional(),
+  events: eventsSchema.optional(),
   housePoints: housePointsSchema.optional(),
   loreEntries: z.record(z.string(), loreEntrySchema).optional(),
   hiddenLoreEntryIds: z.array(z.string()).max(500).optional(),
@@ -296,6 +363,9 @@ export type CollectionSet = NonNullable<GuildSettings["collectionSets"]>[string]
 export type MemberProfile = NonNullable<GuildSettings["memberProfiles"]>[string];
 export type MemberInviteRecord = NonNullable<GuildSettings["memberInviteRecords"]>[string];
 export type Reminder = NonNullable<GuildSettings["reminders"]>[string];
+export type CouncilProposal = NonNullable<GuildSettings["governance"]>["proposals"][string];
+export type StaffApplication = NonNullable<GuildSettings["governance"]>["applications"][string];
+export type RealmEvent = NonNullable<GuildSettings["events"]>["entries"][string];
 export type HousePoints = NonNullable<GuildSettings["housePoints"]>;
 export type HousePointTransaction = HousePoints["transactions"][number];
 export type LoreEntry = z.infer<typeof loreEntrySchema>;
@@ -528,6 +598,220 @@ export async function deleteReminder(guildId: string, reminderId: string): Promi
     await saveSettings();
   });
   await writeQueue;
+}
+
+export async function createCouncilProposal(
+  guildId: string,
+  input: Pick<CouncilProposal, "authorId" | "title" | "body" | "channelId">,
+): Promise<CouncilProposal> {
+  let created: CouncilProposal | undefined;
+  writeQueue = writeQueue.catch(() => undefined).then(async () => {
+    const settings = await loadSettings();
+    const governance = settings[guildId]?.governance;
+    if (!governance) throw new Error("GOVERNANCE_NOT_CONFIGURED");
+    created = councilProposalSchema.parse({
+      ...input,
+      id: governance.nextProposalNumber,
+      messageId: "pending",
+      yesVotes: [],
+      noVotes: [],
+      status: "pending",
+      createdAt: Date.now(),
+    });
+    governance.nextProposalNumber += 1;
+    governance.proposals[String(created.id)] = created;
+    await saveSettings();
+  });
+  await writeQueue;
+  if (!created) throw new Error("PROPOSAL_CREATE_FAILED");
+  return created;
+}
+
+export async function updateCouncilProposal(
+  guildId: string,
+  proposalId: number,
+  changes: Partial<CouncilProposal>,
+): Promise<CouncilProposal | undefined> {
+  let updated: CouncilProposal | undefined;
+  writeQueue = writeQueue.catch(() => undefined).then(async () => {
+    const governance = (await loadSettings())[guildId]?.governance;
+    const current = governance?.proposals[String(proposalId)];
+    if (!governance || !current) return;
+    updated = councilProposalSchema.parse({ ...current, ...changes, id: current.id });
+    governance.proposals[String(proposalId)] = updated;
+    await saveSettings();
+  });
+  await writeQueue;
+  return updated;
+}
+
+export async function castCouncilProposalVote(
+  guildId: string,
+  proposalId: number,
+  userId: string,
+  vote: "yes" | "no",
+): Promise<CouncilProposal | undefined> {
+  let updated: CouncilProposal | undefined;
+  writeQueue = writeQueue.catch(() => undefined).then(async () => {
+    const governance = (await loadSettings())[guildId]?.governance;
+    const proposal = governance?.proposals[String(proposalId)];
+    if (!proposal || proposal.status !== "pending") return;
+    const selected = vote === "yes" ? proposal.yesVotes : proposal.noVotes;
+    const alreadySelected = selected.includes(userId);
+    proposal.yesVotes = proposal.yesVotes.filter((id) => id !== userId);
+    proposal.noVotes = proposal.noVotes.filter((id) => id !== userId);
+    if (!alreadySelected) (vote === "yes" ? proposal.yesVotes : proposal.noVotes).push(userId);
+    updated = proposal;
+    await saveSettings();
+  });
+  await writeQueue;
+  return updated;
+}
+
+export async function createStaffApplication(
+  guildId: string,
+  input: Omit<StaffApplication, "id" | "messageId" | "yesVotes" | "noVotes" | "status" | "createdAt">,
+): Promise<StaffApplication> {
+  let created: StaffApplication | undefined;
+  writeQueue = writeQueue.catch(() => undefined).then(async () => {
+    const settings = await loadSettings();
+    const governance = settings[guildId]?.governance;
+    if (!governance) throw new Error("GOVERNANCE_NOT_CONFIGURED");
+    const pending = Object.values(governance.applications).some(
+      (application) => application.applicantId === input.applicantId && application.status === "pending",
+    );
+    if (pending) throw new Error("PENDING_APPLICATION_EXISTS");
+    created = staffApplicationSchema.parse({
+      ...input,
+      id: governance.nextApplicationNumber,
+      messageId: "pending",
+      yesVotes: [],
+      noVotes: [],
+      status: "pending",
+      createdAt: Date.now(),
+    });
+    governance.nextApplicationNumber += 1;
+    governance.applications[String(created.id)] = created;
+    await saveSettings();
+  });
+  await writeQueue;
+  if (!created) throw new Error("APPLICATION_CREATE_FAILED");
+  return created;
+}
+
+export async function updateStaffApplication(
+  guildId: string,
+  applicationId: number,
+  changes: Partial<StaffApplication>,
+): Promise<StaffApplication | undefined> {
+  let updated: StaffApplication | undefined;
+  writeQueue = writeQueue.catch(() => undefined).then(async () => {
+    const governance = (await loadSettings())[guildId]?.governance;
+    const current = governance?.applications[String(applicationId)];
+    if (!governance || !current) return;
+    updated = staffApplicationSchema.parse({ ...current, ...changes, id: current.id });
+    governance.applications[String(applicationId)] = updated;
+    await saveSettings();
+  });
+  await writeQueue;
+  return updated;
+}
+
+export async function castStaffApplicationVote(
+  guildId: string,
+  applicationId: number,
+  userId: string,
+  vote: "yes" | "no",
+): Promise<StaffApplication | undefined> {
+  let updated: StaffApplication | undefined;
+  writeQueue = writeQueue.catch(() => undefined).then(async () => {
+    const governance = (await loadSettings())[guildId]?.governance;
+    const application = governance?.applications[String(applicationId)];
+    if (!application || application.status !== "pending" || application.applicantId === userId) return;
+    const selected = vote === "yes" ? application.yesVotes : application.noVotes;
+    const alreadySelected = selected.includes(userId);
+    application.yesVotes = application.yesVotes.filter((id) => id !== userId);
+    application.noVotes = application.noVotes.filter((id) => id !== userId);
+    if (!alreadySelected) (vote === "yes" ? application.yesVotes : application.noVotes).push(userId);
+    updated = application;
+    await saveSettings();
+  });
+  await writeQueue;
+  return updated;
+}
+
+export async function createRealmEvent(
+  guildId: string,
+  input: Pick<RealmEvent, "title" | "description" | "location" | "hostId" | "channelId" | "startsAt">,
+): Promise<RealmEvent> {
+  let created: RealmEvent | undefined;
+  writeQueue = writeQueue.catch(() => undefined).then(async () => {
+    const settings = await loadSettings();
+    const guildSettings = settings[guildId] ?? {};
+    const state = guildSettings.events ?? { nextEventNumber: 1, entries: {} };
+    created = realmEventSchema.parse({
+      ...input,
+      id: state.nextEventNumber,
+      messageId: "pending",
+      status: "open",
+      going: [],
+      interested: [],
+      declined: [],
+      createdAt: Date.now(),
+    });
+    state.nextEventNumber += 1;
+    state.entries[String(created.id)] = created;
+    guildSettings.events = state;
+    settings[guildId] = guildSettings;
+    await saveSettings();
+  });
+  await writeQueue;
+  if (!created) throw new Error("EVENT_CREATE_FAILED");
+  return created;
+}
+
+export async function getRealmEvent(guildId: string, eventId: number): Promise<RealmEvent | undefined> {
+  return (await getGuildSettings(guildId)).events?.entries[String(eventId)];
+}
+
+export async function updateRealmEvent(
+  guildId: string,
+  eventId: number,
+  changes: Partial<RealmEvent>,
+): Promise<RealmEvent | undefined> {
+  let updated: RealmEvent | undefined;
+  writeQueue = writeQueue.catch(() => undefined).then(async () => {
+    const state = (await loadSettings())[guildId]?.events;
+    const current = state?.entries[String(eventId)];
+    if (!state || !current) return;
+    updated = realmEventSchema.parse({ ...current, ...changes, id: current.id });
+    state.entries[String(eventId)] = updated;
+    await saveSettings();
+  });
+  await writeQueue;
+  return updated;
+}
+
+export async function castEventRsvp(
+  guildId: string,
+  eventId: number,
+  userId: string,
+  response: "going" | "interested" | "declined",
+): Promise<RealmEvent | undefined> {
+  let updated: RealmEvent | undefined;
+  writeQueue = writeQueue.catch(() => undefined).then(async () => {
+    const event = (await loadSettings())[guildId]?.events?.entries[String(eventId)];
+    if (!event || event.status !== "open") return;
+    const alreadySelected = event[response].includes(userId);
+    event.going = event.going.filter((id) => id !== userId);
+    event.interested = event.interested.filter((id) => id !== userId);
+    event.declined = event.declined.filter((id) => id !== userId);
+    if (!alreadySelected) event[response].push(userId);
+    updated = event;
+    await saveSettings();
+  });
+  await writeQueue;
+  return updated;
 }
 
 export async function getCollectionSets(guildId: string): Promise<CollectionSet[]> {

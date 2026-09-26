@@ -26,7 +26,7 @@ function settingsSummary(settings: GuildSettings): string {
     `**Welcome channel:** ${settings.welcomeChannelId ? `<#${settings.welcomeChannelId}>` : "Not configured"}`,
     `**Join/leave log:** ${settings.logChannelId ? `<#${settings.logChannelId}>` : "Not configured"}`,
     `**Newcomer role:** ${settings.newcomerRoleId ? `<@&${settings.newcomerRoleId}>` : "Not configured"}`,
-    `**Suggestions channel:** ${settings.suggestionChannelId ? `<#${settings.suggestionChannelId}>` : "Not configured"}`,
+    `**Governance:** ${settings.governance ? `petitions <#${settings.governance.petitionChannelId}> · council <#${settings.governance.councilChannelId}> · voters <@&${settings.governance.councilRoleId}> · applications <#${settings.governance.staffApplicationChannelId}>` : "Not configured"}`,
     `**Collection announcements:** ${settings.collectionAnnouncementChannelId ? `<#${settings.collectionAnnouncementChannelId}>` : "Not configured"}`,
     `**Server logs:** ${settings.serverLogChannelId ? `<#${settings.serverLogChannelId}>` : "Not configured"}`,
     `**Reaction logs:** ${settings.reactionLogChannelId ? `<#${settings.reactionLogChannelId}>` : "Not configured"}`,
@@ -68,15 +68,29 @@ export const setupCommand: Command = {
     )
     .addSubcommand((subcommand) =>
       subcommand
-        .setName("suggestions")
-        .setDescription("Choose where member suggestions will be posted.")
+        .setName("governance")
+        .setDescription("Configure petitions, council proposals, and staff applications.")
         .addChannelOption((option) =>
           option
-            .setName("channel")
-            .setDescription("The server suggestions channel.")
+            .setName("petitions-channel")
+            .setDescription("The public channel for member petitions.")
             .addChannelTypes(ChannelType.GuildText, ChannelType.GuildAnnouncement)
             .setRequired(true),
-        ),
+        )
+        .addChannelOption((option) => option
+          .setName("council-channel")
+          .setDescription("The private channel for council proposals.")
+          .addChannelTypes(ChannelType.GuildText)
+          .setRequired(true))
+        .addRoleOption((option) => option
+          .setName("council-role")
+          .setDescription("The staff/council role permitted to vote.")
+          .setRequired(true))
+        .addChannelOption((option) => option
+          .setName("applications-channel")
+          .setDescription("The private channel that stores staff applications.")
+          .addChannelTypes(ChannelType.GuildText)
+          .setRequired(true)),
     )
     .addSubcommand((subcommand) =>
       subcommand
@@ -155,7 +169,6 @@ export const setupCommand: Command = {
               { name: "Welcome channel", value: "welcomeChannelId" },
               { name: "Join/leave log", value: "logChannelId" },
               { name: "Newcomer role", value: "newcomerRoleId" },
-              { name: "Suggestions channel", value: "suggestionChannelId" },
               {
                 name: "Collection announcements",
                 value: "collectionAnnouncementChannelId",
@@ -233,14 +246,32 @@ export const setupCommand: Command = {
       return;
     }
 
-    if (subcommand === "suggestions") {
-      const channel = interaction.options.getChannel("channel", true);
+    if (subcommand === "governance") {
+      const petitions = interaction.options.getChannel("petitions-channel", true);
+      const council = interaction.options.getChannel("council-channel", true);
+      const councilRole = interaction.options.getRole("council-role", true);
+      const applications = interaction.options.getChannel("applications-channel", true);
+      if (councilRole.id === interaction.guild.roles.everyone.id) {
+        await interaction.reply({ content: "Choose a private staff or council role—not @everyone—for voting.", flags: MessageFlags.Ephemeral });
+        return;
+      }
+      const current = await getGuildSettings(interaction.guildId);
       const settings = await updateGuildSettings(interaction.guildId, {
-        suggestionChannelId: channel.id,
+        suggestionChannelId: petitions.id,
+        governance: {
+          petitionChannelId: petitions.id,
+          councilChannelId: council.id,
+          councilRoleId: councilRole.id,
+          staffApplicationChannelId: applications.id,
+          nextProposalNumber: current.governance?.nextProposalNumber ?? 1,
+          proposals: current.governance?.proposals ?? {},
+          nextApplicationNumber: current.governance?.nextApplicationNumber ?? 1,
+          applications: current.governance?.applications ?? {},
+        },
       });
 
       await interaction.reply({
-        content: `Suggestions will now be posted in ${channel}.\n\n${settingsSummary(settings)}`,
+        content: `Governance is configured: petitions in ${petitions}, private proposals in ${council}, staff applications in ${applications}, and ${councilRole} may vote. Only the server owner can make final accept/deny decisions.\n\n${settingsSummary(settings)}`,
         flags: MessageFlags.Ephemeral,
       });
       return;
