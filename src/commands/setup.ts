@@ -28,6 +28,7 @@ function settingsSummary(settings: GuildSettings): string {
     `**Newcomer role:** ${settings.newcomerRoleId ? `<@&${settings.newcomerRoleId}>` : "Not configured"}`,
     `**Suggestions channel:** ${settings.suggestionChannelId ? `<#${settings.suggestionChannelId}>` : "Not configured"}`,
     `**Collection announcements:** ${settings.collectionAnnouncementChannelId ? `<#${settings.collectionAnnouncementChannelId}>` : "Not configured"}`,
+    `**Reaction log:** ${settings.reactionLogChannelId ? `<#${settings.reactionLogChannelId}>` : "Not configured"}`,
     `**Modmail:** ${settings.modmail ? `tickets in <#${settings.modmail.categoryId}> · staff <@&${settings.modmail.staffRoleId}> · logs <#${settings.modmail.logChannelId}>` : "Not configured"}`,
     `**Moderation logs:** ${settings.moderation ? `<#${settings.moderation.logChannelId}>` : "Not configured"}`,
   ].join("\n");
@@ -111,6 +112,18 @@ export const setupCommand: Command = {
         ),
     )
     .addSubcommand((subcommand) =>
+      subcommand
+        .setName("reaction-logs")
+        .setDescription("Choose where added and removed reactions are recorded.")
+        .addChannelOption((option) =>
+          option
+            .setName("channel")
+            .setDescription("The private channel for reaction activity logs.")
+            .addChannelTypes(ChannelType.GuildText)
+            .setRequired(true),
+        ),
+    )
+    .addSubcommand((subcommand) =>
       subcommand.setName("check").setDescription("Check Grey Ghost's setup and permissions."),
     )
     .addSubcommand((subcommand) =>
@@ -136,6 +149,7 @@ export const setupCommand: Command = {
               },
               { name: "Modmail", value: "modmail" },
               { name: "Moderation records", value: "moderation" },
+              { name: "Reaction log", value: "reactionLogChannelId" },
               { name: "All basic server settings", value: "all" },
             ),
         ),
@@ -270,6 +284,18 @@ export const setupCommand: Command = {
       });
       await interaction.reply({
         content: `Moderation cases will now be recorded in ${logChannel}.\n\n${settingsSummary(settings)}`,
+        flags: MessageFlags.Ephemeral,
+      });
+      return;
+    }
+
+    if (subcommand === "reaction-logs") {
+      const channel = interaction.options.getChannel("channel", true);
+      const settings = await updateGuildSettings(interaction.guildId, {
+        reactionLogChannelId: channel.id,
+      });
+      await interaction.reply({
+        content: `Added and removed reactions will now be recorded in ${channel}.\n\n${settingsSummary(settings)}`,
         flags: MessageFlags.Ephemeral,
       });
       return;

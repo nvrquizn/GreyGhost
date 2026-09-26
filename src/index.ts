@@ -20,16 +20,18 @@ import { registerModmailEvents } from "./modmail/events.js";
 import { registerModmailInteractions } from "./modmail/interactions.js";
 import { registerQuizInteractions } from "./quizzes/runtime.js";
 import { registerPrefixCommands } from "./prefix/handler.js";
+import { registerReactionEvents } from "./events/reaction-events.js";
 
 const client = new Client({
   intents: [
     GatewayIntentBits.Guilds,
     GatewayIntentBits.GuildMembers,
     GatewayIntentBits.GuildMessages,
+    GatewayIntentBits.GuildMessageReactions,
     GatewayIntentBits.DirectMessages,
     GatewayIntentBits.MessageContent,
   ],
-  partials: [Partials.Channel],
+  partials: [Partials.Channel, Partials.Message, Partials.Reaction, Partials.User],
 });
 
 registerMemberEvents(client);
@@ -44,6 +46,7 @@ registerModmailEvents(client);
 registerModmailInteractions(client);
 registerQuizInteractions(client);
 registerPrefixCommands(client);
+registerReactionEvents(client);
 
 client.once(Events.ClientReady, (readyClient) => {
   readyClient.user.setActivity("the mists of Dragonstone", {

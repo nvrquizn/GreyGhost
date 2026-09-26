@@ -20,6 +20,7 @@ current build supports both slash commands and role-aware `?` prefix commands.
 - `/setup check` — checks configured channels, permissions, panels, and title roles
 - `/setup modmail` — configures the private ticket category, staff role, and transcript log
 - `/setup moderation` — chooses the private moderation case-log channel
+- `/setup reaction-logs` — chooses where added and removed reactions are recorded
 - `/backup create` and `/backup restore` — export or restore server-specific bot data
 - `/selfroles configure` — selects up to 25 roles for a self-role panel
 - `/selfroles emoji` — assigns an emoji to a configured role button
@@ -70,6 +71,7 @@ current build supports both slash commands and role-aware `?` prefix commands.
 - Welcomes new members at the gates of King's Landing
 - Automatically assigns the configured newcomer role
 - Records member joins and departures in a private log channel
+- Records every added and removed message reaction in a designated private log
 
 ## Self-role panels
 

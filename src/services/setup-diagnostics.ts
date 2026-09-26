@@ -34,6 +34,7 @@ export async function diagnoseGuildSetup(guild: Guild): Promise<SetupDiagnostics
     ["Join/leave log", settings.logChannelId],
     ["Suggestions channel", settings.suggestionChannelId],
     ["Collection announcements", settings.collectionAnnouncementChannelId],
+    ["Reaction log", settings.reactionLogChannelId],
     ["Statistics dashboard", settings.statsChannelId],
   ];
 
