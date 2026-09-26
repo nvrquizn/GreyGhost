@@ -16,6 +16,7 @@ import {
   joinQuiz,
   recordQuizAnswer,
   updateQuiz,
+  awardAchievement,
   type Quiz,
 } from "../services/guild-settings.js";
 
@@ -147,7 +148,9 @@ export async function finishQuiz(guild: Guild, quizId: number): Promise<Quiz> {
   const channel = await guild.channels.fetch(updated.channelId);
   if (channel?.type === ChannelType.GuildText) {
     const highest = Math.max(0, ...Object.values(updated.scores));
-    const winners = Object.entries(updated.scores).filter(([, score]) => score === highest && highest > 0).map(([id]) => `<@${id}>`);
+    const winnerIds = Object.entries(updated.scores).filter(([, score]) => score === highest && highest > 0).map(([id]) => id);
+    const winners = winnerIds.map((id) => `<@${id}>`);
+    await Promise.all(winnerIds.map((userId) => awardAchievement(guild.id, userId, "quiz-champion")));
     await channel.send({ embeds: [new EmbedBuilder()
       .setColor(0xd4af37)
       .setTitle(`${updated.title} · Final Results`)

@@ -110,6 +110,74 @@ const eventsSchema = z.object({
   entries: z.record(z.string(), realmEventSchema).default({}),
 });
 
+const chronicleEntrySchema = z.object({
+  id: z.number().int().positive(),
+  type: z.enum(["server_creation", "house_season", "joust_champion", "manual"]),
+  title: z.string().min(1).max(120),
+  description: z.string().min(1).max(2000),
+  occurredAt: z.number().int().positive(),
+  relatedUserIds: z.array(z.string()).max(100).default([]),
+  relatedRoleIds: z.array(z.string()).max(50).default([]),
+  createdBy: z.string().optional(),
+  sourceKey: z.string().max(100).optional(),
+});
+
+const chroniclesSchema = z.object({
+  nextEntryNumber: z.number().int().positive().default(1),
+  entries: z.record(z.string(), chronicleEntrySchema).default({}),
+});
+
+const houseSeasonSchema = z.object({
+  id: z.number().int().positive(),
+  name: z.string().min(1).max(100),
+  status: z.enum(["active", "finished"]),
+  startedAt: z.number().int().positive(),
+  endedAt: z.number().int().positive().optional(),
+  scores: z.record(z.string(), z.number().int().min(0)),
+  winnerRoleIds: z.array(z.string()).max(25),
+});
+
+const houseSeasonsSchema = z.object({
+  nextSeasonNumber: z.number().int().positive().default(1),
+  currentSeasonId: z.number().int().positive().optional(),
+  entries: z.record(z.string(), houseSeasonSchema).default({}),
+});
+
+export const houseQuestCategorySchema = z.enum([
+  "lore",
+  "creative",
+  "service",
+  "recruitment",
+  "jousting",
+]);
+
+const houseQuestSchema = z.object({
+  id: z.number().int().positive(),
+  title: z.string().min(1).max(100),
+  description: z.string().min(1).max(1500),
+  category: houseQuestCategorySchema,
+  houseRoleId: z.string(),
+  target: z.number().int().min(1).max(10000),
+  progress: z.number().int().min(0).max(10000),
+  rewardPoints: z.number().int().min(0).max(1000),
+  status: z.enum(["active", "completed", "cancelled"]),
+  deadlineAt: z.number().int().positive().optional(),
+  createdAt: z.number().int().positive(),
+  completedAt: z.number().int().positive().optional(),
+  createdBy: z.string(),
+});
+
+const houseQuestsSchema = z.object({
+  nextQuestNumber: z.number().int().positive().default(1),
+  entries: z.record(z.string(), houseQuestSchema).default({}),
+});
+
+const achievementAwardSchema = z.object({
+  achievementId: z.string().min(1).max(50),
+  awardedAt: z.number().int().positive(),
+  awardedBy: z.string().optional(),
+});
+
 const housePointTransactionSchema = z.object({
   id: z.string(),
   houseRoleId: z.string(),
@@ -322,6 +390,7 @@ export const guildSettingsSchema = z.object({
   reactionLogChannelId: z.string().optional(),
   statsChannelId: z.string().optional(),
   statsMessageId: z.string().optional(),
+  chronicleChannelId: z.string().optional(),
   collectionSets: z.record(z.string(), collectionSetSchema).optional(),
   selfRolePanels: z
     .record(
@@ -346,6 +415,10 @@ export const guildSettingsSchema = z.object({
   reminders: z.record(z.string(), reminderSchema).optional(),
   governance: governanceSchema.optional(),
   events: eventsSchema.optional(),
+  chronicles: chroniclesSchema.optional(),
+  houseSeasons: houseSeasonsSchema.optional(),
+  houseQuests: houseQuestsSchema.optional(),
+  memberAchievements: z.record(z.string(), z.array(achievementAwardSchema).max(100)).optional(),
   housePoints: housePointsSchema.optional(),
   loreEntries: z.record(z.string(), loreEntrySchema).optional(),
   hiddenLoreEntryIds: z.array(z.string()).max(500).optional(),
@@ -366,6 +439,11 @@ export type Reminder = NonNullable<GuildSettings["reminders"]>[string];
 export type CouncilProposal = NonNullable<GuildSettings["governance"]>["proposals"][string];
 export type StaffApplication = NonNullable<GuildSettings["governance"]>["applications"][string];
 export type RealmEvent = NonNullable<GuildSettings["events"]>["entries"][string];
+export type ChronicleEntry = NonNullable<GuildSettings["chronicles"]>["entries"][string];
+export type HouseSeason = NonNullable<GuildSettings["houseSeasons"]>["entries"][string];
+export type HouseQuest = NonNullable<GuildSettings["houseQuests"]>["entries"][string];
+export type HouseQuestCategory = z.infer<typeof houseQuestCategorySchema>;
+export type AchievementAward = NonNullable<GuildSettings["memberAchievements"]>[string][number];
 export type HousePoints = NonNullable<GuildSettings["housePoints"]>;
 export type HousePointTransaction = HousePoints["transactions"][number];
 export type LoreEntry = z.infer<typeof loreEntrySchema>;
@@ -442,6 +520,7 @@ export async function clearGuildSetting(
     delete current.reactionLogChannelId;
     delete current.statsChannelId;
     delete current.statsMessageId;
+    delete current.chronicleChannelId;
     settings[guildId] = current;
   } else {
     const current = { ...settings[guildId] };
@@ -812,6 +891,252 @@ export async function castEventRsvp(
   });
   await writeQueue;
   return updated;
+}
+
+export async function addChronicleEntry(
+  guildId: string,
+  input: Omit<ChronicleEntry, "id">,
+): Promise<ChronicleEntry> {
+  let entry: ChronicleEntry | undefined;
+  writeQueue = writeQueue.catch(() => undefined).then(async () => {
+    const settings = await loadSettings();
+    const guildSettings = settings[guildId] ?? {};
+    const chronicles = guildSettings.chronicles ?? { nextEntryNumber: 1, entries: {} };
+    if (input.sourceKey) {
+      const existing = Object.values(chronicles.entries).find((item) => item.sourceKey === input.sourceKey);
+      if (existing) {
+        entry = existing;
+        return;
+      }
+    }
+    entry = chronicleEntrySchema.parse({ ...input, id: chronicles.nextEntryNumber });
+    chronicles.nextEntryNumber += 1;
+    chronicles.entries[String(entry.id)] = entry;
+    guildSettings.chronicles = chronicles;
+    settings[guildId] = guildSettings;
+    await saveSettings();
+  });
+  await writeQueue;
+  if (!entry) throw new Error("CHRONICLE_CREATE_FAILED");
+  return entry;
+}
+
+export async function getChronicleEntries(guildId: string): Promise<ChronicleEntry[]> {
+  const settings = await getGuildSettings(guildId);
+  return Object.values(settings.chronicles?.entries ?? {}).sort((a, b) => b.occurredAt - a.occurredAt || b.id - a.id);
+}
+
+export async function ensureServerCreationChronicle(
+  guildId: string,
+  guildName: string,
+  createdAt: number,
+): Promise<ChronicleEntry> {
+  return addChronicleEntry(guildId, {
+    type: "server_creation",
+    title: "The Realm Was Founded",
+    description: `**${guildName}** was created, beginning the first page of its recorded history.`,
+    occurredAt: createdAt,
+    relatedUserIds: [],
+    relatedRoleIds: [],
+    sourceKey: "server-creation",
+  });
+}
+
+export async function startHouseSeason(guildId: string, name: string): Promise<HouseSeason> {
+  let season: HouseSeason | undefined;
+  writeQueue = writeQueue.catch(() => undefined).then(async () => {
+    const settings = await loadSettings();
+    const guildSettings = settings[guildId] ?? {};
+    const seasons = guildSettings.houseSeasons ?? { nextSeasonNumber: 1, entries: {} };
+    if (seasons.currentSeasonId) throw new Error("ACTIVE_SEASON_EXISTS");
+    season = houseSeasonSchema.parse({
+      id: seasons.nextSeasonNumber,
+      name,
+      status: "active",
+      startedAt: Date.now(),
+      scores: {},
+      winnerRoleIds: [],
+    });
+    seasons.nextSeasonNumber += 1;
+    seasons.currentSeasonId = season.id;
+    seasons.entries[String(season.id)] = season;
+    guildSettings.houseSeasons = seasons;
+    const housePoints = guildSettings.housePoints ?? { scores: {}, transactions: [] };
+    guildSettings.housePoints = housePointsSchema.parse({ ...housePoints, scores: {} });
+    settings[guildId] = guildSettings;
+    await saveSettings();
+  });
+  await writeQueue;
+  if (!season) throw new Error("SEASON_START_FAILED");
+  return season;
+}
+
+export async function getCurrentHouseSeason(guildId: string): Promise<HouseSeason | undefined> {
+  const settings = await getGuildSettings(guildId);
+  const id = settings.houseSeasons?.currentSeasonId;
+  return id ? settings.houseSeasons?.entries[String(id)] : undefined;
+}
+
+export async function getHouseSeasons(guildId: string): Promise<HouseSeason[]> {
+  const settings = await getGuildSettings(guildId);
+  return Object.values(settings.houseSeasons?.entries ?? {}).sort((a, b) => b.id - a.id);
+}
+
+export async function endHouseSeason(guildId: string): Promise<HouseSeason> {
+  let season: HouseSeason | undefined;
+  writeQueue = writeQueue.catch(() => undefined).then(async () => {
+    const settings = await loadSettings();
+    const guildSettings = settings[guildId];
+    const seasons = guildSettings?.houseSeasons;
+    const currentId = seasons?.currentSeasonId;
+    const current = currentId ? seasons?.entries[String(currentId)] : undefined;
+    if (!guildSettings || !seasons || !current) throw new Error("NO_ACTIVE_SEASON");
+    const scores = { ...(guildSettings.housePoints?.scores ?? {}) };
+    const highest = Math.max(0, ...Object.values(scores));
+    const winnerRoleIds = highest > 0
+      ? Object.entries(scores).filter(([, score]) => score === highest).map(([roleId]) => roleId)
+      : [];
+    season = houseSeasonSchema.parse({
+      ...current,
+      status: "finished",
+      endedAt: Date.now(),
+      scores,
+      winnerRoleIds,
+    });
+    seasons.entries[String(current.id)] = season;
+    delete seasons.currentSeasonId;
+    await saveSettings();
+  });
+  await writeQueue;
+  if (!season) throw new Error("SEASON_END_FAILED");
+  return season;
+}
+
+export async function createHouseQuest(
+  guildId: string,
+  input: Omit<HouseQuest, "id" | "progress" | "status" | "createdAt" | "completedAt">,
+): Promise<HouseQuest> {
+  let quest: HouseQuest | undefined;
+  writeQueue = writeQueue.catch(() => undefined).then(async () => {
+    const settings = await loadSettings();
+    const guildSettings = settings[guildId] ?? {};
+    const quests = guildSettings.houseQuests ?? { nextQuestNumber: 1, entries: {} };
+    quest = houseQuestSchema.parse({
+      ...input,
+      id: quests.nextQuestNumber,
+      progress: 0,
+      status: "active",
+      createdAt: Date.now(),
+    });
+    quests.nextQuestNumber += 1;
+    quests.entries[String(quest.id)] = quest;
+    guildSettings.houseQuests = quests;
+    settings[guildId] = guildSettings;
+    await saveSettings();
+  });
+  await writeQueue;
+  if (!quest) throw new Error("QUEST_CREATE_FAILED");
+  return quest;
+}
+
+export async function getHouseQuest(guildId: string, questId: number): Promise<HouseQuest | undefined> {
+  return (await getGuildSettings(guildId)).houseQuests?.entries[String(questId)];
+}
+
+export async function getHouseQuests(guildId: string): Promise<HouseQuest[]> {
+  const settings = await getGuildSettings(guildId);
+  return Object.values(settings.houseQuests?.entries ?? {}).sort((a, b) => b.id - a.id);
+}
+
+export async function progressHouseQuest(
+  guildId: string,
+  questId: number,
+  amount: number,
+): Promise<{ quest: HouseQuest; completedNow: boolean } | undefined> {
+  let result: { quest: HouseQuest; completedNow: boolean } | undefined;
+  writeQueue = writeQueue.catch(() => undefined).then(async () => {
+    const quests = (await loadSettings())[guildId]?.houseQuests;
+    const quest = quests?.entries[String(questId)];
+    if (!quests || !quest || quest.status !== "active") return;
+    const progress = Math.min(quest.target, quest.progress + amount);
+    const completedNow = progress >= quest.target;
+    const updated = houseQuestSchema.parse({
+      ...quest,
+      progress,
+      status: completedNow ? "completed" : "active",
+      completedAt: completedNow ? Date.now() : undefined,
+    });
+    quests.entries[String(questId)] = updated;
+    await saveSettings();
+    result = { quest: updated, completedNow };
+  });
+  await writeQueue;
+  return result;
+}
+
+export async function cancelHouseQuest(guildId: string, questId: number): Promise<HouseQuest | undefined> {
+  let cancelled: HouseQuest | undefined;
+  writeQueue = writeQueue.catch(() => undefined).then(async () => {
+    const quests = (await loadSettings())[guildId]?.houseQuests;
+    const quest = quests?.entries[String(questId)];
+    if (!quests || !quest || quest.status !== "active") return;
+    cancelled = houseQuestSchema.parse({ ...quest, status: "cancelled" });
+    quests.entries[String(questId)] = cancelled;
+    await saveSettings();
+  });
+  await writeQueue;
+  return cancelled;
+}
+
+export async function awardAchievement(
+  guildId: string,
+  userId: string,
+  achievementId: string,
+  awardedBy?: string,
+): Promise<{ award: AchievementAward; isNew: boolean }> {
+  let result: { award: AchievementAward; isNew: boolean } | undefined;
+  writeQueue = writeQueue.catch(() => undefined).then(async () => {
+    const settings = await loadSettings();
+    const guildSettings = settings[guildId] ?? {};
+    const current = guildSettings.memberAchievements?.[userId] ?? [];
+    const existing = current.find((award) => award.achievementId === achievementId);
+    if (existing) {
+      result = { award: existing, isNew: false };
+      return;
+    }
+    const award = achievementAwardSchema.parse({ achievementId, awardedAt: Date.now(), awardedBy });
+    guildSettings.memberAchievements = {
+      ...guildSettings.memberAchievements,
+      [userId]: [...current, award],
+    };
+    settings[guildId] = guildSettings;
+    await saveSettings();
+    result = { award, isNew: true };
+  });
+  await writeQueue;
+  if (!result) throw new Error("ACHIEVEMENT_AWARD_FAILED");
+  return result;
+}
+
+export async function getMemberAchievements(guildId: string, userId: string): Promise<AchievementAward[]> {
+  const settings = await getGuildSettings(guildId);
+  return [...(settings.memberAchievements?.[userId] ?? [])].sort((a, b) => a.awardedAt - b.awardedAt);
+}
+
+export async function revokeAchievement(guildId: string, userId: string, achievementId: string): Promise<boolean> {
+  let removed = false;
+  writeQueue = writeQueue.catch(() => undefined).then(async () => {
+    const settings = await loadSettings();
+    const guildSettings = settings[guildId];
+    const current = guildSettings?.memberAchievements?.[userId];
+    if (!guildSettings?.memberAchievements || !current) return;
+    const filtered = current.filter((award) => award.achievementId !== achievementId);
+    removed = filtered.length !== current.length;
+    guildSettings.memberAchievements[userId] = filtered;
+    if (removed) await saveSettings();
+  });
+  await writeQueue;
+  return removed;
 }
 
 export async function getCollectionSets(guildId: string): Promise<CollectionSet[]> {

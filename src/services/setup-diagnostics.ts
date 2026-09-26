@@ -47,6 +47,7 @@ export async function diagnoseGuildSetup(guild: Guild): Promise<SetupDiagnostics
     ["Server logs", settings.serverLogChannelId],
     ["Reaction logs", settings.reactionLogChannelId],
     ["Statistics dashboard", settings.statsChannelId],
+    ["Chronicles channel", settings.chronicleChannelId],
   ];
 
   for (const [label, channelId] of channelSettings) {

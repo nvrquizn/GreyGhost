@@ -39,6 +39,10 @@ import { petitionCommand } from "./petition.js";
 import { councilCommand } from "./council.js";
 import { staffApplyCommand } from "./staffapply.js";
 import { eventCommand } from "./event.js";
+import { chronicleCommand } from "./chronicle.js";
+import { achievementsCommand } from "./achievements.js";
+import { seasonCommand } from "./season.js";
+import { houseQuestCommand } from "./housequest.js";
 
 export const commands: Command[] = [
   pingCommand,
@@ -80,6 +84,10 @@ export const commands: Command[] = [
   councilCommand,
   staffApplyCommand,
   eventCommand,
+  chronicleCommand,
+  achievementsCommand,
+  seasonCommand,
+  houseQuestCommand,
 ];
 
 export const commandMap = new Map(

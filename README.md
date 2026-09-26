@@ -32,6 +32,8 @@ current build supports both slash commands and role-aware `?` prefix commands.
 - `/setup server-logs` — chooses one private channel for message, channel,
   permission, thread, role, member, invite, and ghost-ping activity
 - `/setup reaction-logs` — chooses a separate private channel for reaction activity
+- `/setup chronicles` — chooses the channel for permanent Realm history and
+  immediately publishes the server-founding record
 - `/backup create` and `/backup restore` — export or restore server-specific bot data
 - `/selfroles configure` — selects up to 25 roles for a self-role panel
 - `/selfroles emoji` — assigns an emoji to a configured role button
@@ -60,6 +62,14 @@ current build supports both slash commands and role-aware `?` prefix commands.
   current scores and recent point changes
 - `/housepoints award` and `/housepoints deduct` — staff-only, audited House
   Point changes with a reason and optional credited member
+- `/season status`, `/season history`, `/season start`, and `/season end` — run
+  House Point seasons, archive final scores, and record tied winners fairly
+- `/housequest list`, `/housequest create`, `/housequest progress`, and
+  `/housequest cancel` — track staff-verified House objectives and rewards
+- `/chronicle view` and `/chronicle record` — read permanent Realm history or
+  add a staff-curated milestone
+- `/achievements view`, `/achievements grant`, and `/achievements revoke` —
+  display and manage permanent member achievements
 - `/lore view`, `/lore search`, and `/lore list` — browse Houses, characters,
   and dragons by name or alias, with autocomplete and private spoiler reveals
 - `/directory house`, `/directory character`, and `/directory dragon` — add or
@@ -167,6 +177,29 @@ House Points can only be assigned to roles configured in the House Allegiance
 panel. Every award or deduction records its amount, reason, staff member,
 timestamp, and optional credited member. Scores cannot fall below zero, and the
 ledger is included in Grey Ghost backups.
+
+## Chronicles, House seasons, quests, and achievements
+
+Configure the publication channel with `/setup chronicles`. Grey Ghost records
+the server's founding, completed House-season winners, and jousting champions.
+Managers can also preserve other important milestones with `/chronicle record`;
+all saved entries remain readable with `/chronicle view` even if the publication
+channel is temporarily unavailable.
+
+Starting a House season resets only the active House scores. Ending it archives
+the final scores, preserves ties, records the winner in the Chronicles, and
+awards **Victor of the Season** to current members of every winning House. The
+completed season remains available through `/season history`.
+
+House quests are deliberate, staff-verified objectives in the Lore & Trivia,
+Creative Work, Service to the Realm, Recruitment, or Jousting categories. They
+do not include generic participation or petition quests. Staff record progress;
+completion awards the configured House Points through the existing audited
+ledger. An optionally credited member earns **Quest Contributor**.
+
+Other achievements are awarded automatically for winning a first jousting tilt,
+winning a jousting tournament, and finishing first in a quiz. The server owner
+receives **Founder of the Realm** when the founding Chronicle is established.
 
 ## ASOIAF directory
 

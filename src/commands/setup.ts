@@ -8,11 +8,13 @@ import {
 import type { Command } from "../types/command.js";
 import {
   clearGuildSetting,
+  ensureServerCreationChronicle,
   getGuildSettings,
   updateGuildSettings,
   type GuildSettings,
 } from "../services/guild-settings.js";
 import { diagnoseGuildSetup } from "../services/setup-diagnostics.js";
+import { publishChronicleEntry } from "../chronicles/runtime.js";
 
 function diagnosticList(items: string[], empty: string): string {
   if (!items.length) return empty;
@@ -30,6 +32,7 @@ function settingsSummary(settings: GuildSettings): string {
     `**Collection announcements:** ${settings.collectionAnnouncementChannelId ? `<#${settings.collectionAnnouncementChannelId}>` : "Not configured"}`,
     `**Server logs:** ${settings.serverLogChannelId ? `<#${settings.serverLogChannelId}>` : "Not configured"}`,
     `**Reaction logs:** ${settings.reactionLogChannelId ? `<#${settings.reactionLogChannelId}>` : "Not configured"}`,
+    `**Chronicles:** ${settings.chronicleChannelId ? `<#${settings.chronicleChannelId}>` : "Not configured"}`,
     `**Modmail:** ${settings.modmail ? `tickets in <#${settings.modmail.categoryId}> · staff <@&${settings.modmail.staffRoleId}> · logs <#${settings.modmail.logChannelId}>` : "Not configured"}`,
     `**Moderation logs:** ${settings.moderation ? `<#${settings.moderation.logChannelId}>` : "Not configured"}`,
   ].join("\n");
@@ -150,6 +153,14 @@ export const setupCommand: Command = {
             .setRequired(true),
         ),
     )
+    .addSubcommand((subcommand) => subcommand
+      .setName("chronicles")
+      .setDescription("Choose where permanent Realm history is published.")
+      .addChannelOption((option) => option
+        .setName("channel")
+        .setDescription("The public or read-only Chronicles channel.")
+        .addChannelTypes(ChannelType.GuildText, ChannelType.GuildAnnouncement)
+        .setRequired(true)))
     .addSubcommand((subcommand) =>
       subcommand.setName("check").setDescription("Check Grey Ghost's setup and permissions."),
     )
@@ -177,6 +188,7 @@ export const setupCommand: Command = {
               { name: "Moderation records", value: "moderation" },
               { name: "Server logs", value: "serverLogChannelId" },
               { name: "Reaction logs", value: "reactionLogChannelId" },
+              { name: "Chronicles channel", value: "chronicleChannelId" },
               { name: "All basic server settings", value: "all" },
             ),
         ),
@@ -353,6 +365,22 @@ export const setupCommand: Command = {
       });
       await interaction.reply({
         content: `Added and removed reactions will now be recorded separately in ${channel}.\n\n${settingsSummary(settings)}`,
+        flags: MessageFlags.Ephemeral,
+      });
+      return;
+    }
+
+    if (subcommand === "chronicles") {
+      const channel = interaction.options.getChannel("channel", true);
+      const settings = await updateGuildSettings(interaction.guildId, { chronicleChannelId: channel.id });
+      const founding = await ensureServerCreationChronicle(
+        interaction.guildId,
+        interaction.guild.name,
+        interaction.guild.createdTimestamp,
+      );
+      await publishChronicleEntry(interaction.guild, founding);
+      await interaction.reply({
+        content: `Realm history—including server founding, House-season winners, and tourney champions—will be published in ${channel}. The founding record has been posted.\n\n${settingsSummary(settings)}`,
         flags: MessageFlags.Ephemeral,
       });
       return;

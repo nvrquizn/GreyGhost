@@ -2,6 +2,9 @@ import { ChannelType, EmbedBuilder, type Guild } from "discord.js";
 import {
   getJoust,
   getGuildSettings,
+  addChronicleEntry,
+  awardAchievement,
+  getChronicleEntries,
   resolveJoustRound,
   startJoust,
   updateJoust,
@@ -9,6 +12,7 @@ import {
   type JoustMatch,
 } from "../services/guild-settings.js";
 import { refreshStatsDashboard } from "../stats/dashboard.js";
+import { publishChronicleEntry } from "../chronicles/runtime.js";
 
 function entrantLine(joust: Joust, userId: string): string {
   const entrant = joust.entrants[userId];
@@ -93,6 +97,8 @@ export async function runJoustRound(guild: Guild, joustId: number, staffId: stri
   if (!channel || channel.type !== ChannelType.GuildText) throw new Error("JOUST_CHANNEL_INVALID");
 
   if (result.matches.length) {
+    const winners = [...new Set(result.matches.map((match) => match.winnerId))];
+    await Promise.all(winners.map((userId) => awardAchievement(guild.id, userId, "first-tilt")));
     const byes = result.byes.length
       ? result.byes.map((userId) => `<@${userId}> advances without a tilt.`).join("\n")
       : "No byes this round.";
@@ -117,6 +123,21 @@ export async function runJoustRound(guild: Guild, joustId: number, staffId: stri
       .setDescription(champions || "The lists closed without a champion.")
       .addFields({ name: "Top Three Riders", value: joustPodium(result.joust) })
       .setFooter({ text: result.joust.championIds.length > 1 ? "Only riders of one House remained, so they share the victory." : `Joust #${joustId} concluded` })] });
+    await Promise.all(result.joust.championIds.map((userId) => awardAchievement(guild.id, userId, "tourney-champion")));
+    const sourceKey = `joust:${result.joust.id}`;
+    const alreadyRecorded = (await getChronicleEntries(guild.id)).some((entry) => entry.sourceKey === sourceKey);
+    const entry = await addChronicleEntry(guild.id, {
+      type: "joust_champion",
+      title: `${result.joust.title} · Tourney Champion${result.joust.championIds.length === 1 ? "" : "s"}`,
+      description: result.joust.championIds.length
+        ? `${result.joust.championIds.map((userId) => `<@${userId}>`).join(" and ")} claimed victory in the lists.`
+        : "The tourney concluded without a champion.",
+      occurredAt: Date.now(),
+      relatedUserIds: result.joust.championIds,
+      relatedRoleIds: [...new Set(result.joust.championIds.map((userId) => result.joust.entrants[userId]?.houseRoleId).filter((roleId): roleId is string => Boolean(roleId)))],
+      sourceKey,
+    });
+    if (!alreadyRecorded) await publishChronicleEntry(guild, entry);
   }
   return result.joust;
 }

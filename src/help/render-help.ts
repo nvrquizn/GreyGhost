@@ -44,6 +44,11 @@ export function renderHelp(member: GuildMember | null, isModmailStaff = false): 
           line("housepoints standings", "View House standings and history."),
           line("lore", "Browse the ASOIAF directory."),
           line("joust", "Enter, withdraw from, or inspect a joust."),
+          line("chronicle view", "Read the Realm's permanent history."),
+          line("season status", "View the active House season and its standings."),
+          line("season history", "Review completed House seasons and winners."),
+          line("housequest list", "View active and recent House quests."),
+          line("achievements view", "View a member's earned achievements."),
         ].join("\n"),
       },
     );
@@ -66,6 +71,10 @@ export function renderHelp(member: GuildMember | null, isModmailStaff = false): 
     line("stats", "Publish or refresh the statistics dashboard."),
     line("housepoints", "Award or deduct audited House Points."),
     line("petition status", "Make the final decision on a petition (owner only)."),
+    line("chronicle record", "Write a major event into the Chronicles."),
+    line("season", "Start or end House Point seasons."),
+    line("housequest", "Create, progress, or cancel House quests."),
+    line("achievements", "Grant or revoke special achievements."),
   );
   if (roleManager) staffTools.push(
     line("selfroles", "Configure and publish self-role panels."),
@@ -105,5 +114,5 @@ export function renderHelp(member: GuildMember | null, isModmailStaff = false): 
   }
 
   return embed
-    .setFooter({ text: "Version 0.18.0 · Slash and ? prefix commands" });
+    .setFooter({ text: "Version 0.19.0 · Slash and ? prefix commands" });
 }

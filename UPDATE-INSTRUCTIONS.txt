@@ -1,16 +1,16 @@
-GREY GHOST v0.18.0 — SAFE REPLACEMENT PACKAGE
+GREY GHOST v0.19.0 — SAFE REPLACEMENT PACKAGE
 
 This package contains the complete bot source code, so it can safely restore a
-src folder while installing the event and governance update.
+src folder while installing the Chronicles and House-season update.
 
 1. Extract this ZIP.
-2. Open the extracted Grey-Ghost-v0.18.0-safe-replacement folder.
+2. Open the extracted Grey-Ghost-v0.19.0-safe-replacement folder.
 3. Select src, package.json, package-lock.json, tsconfig.json, and README.md.
 4. Drag them directly into the TOP LEVEL of your existing Grey Ghost bot folder.
 5. Choose Replace for the matching src folder and files.
 
 Choosing Replace for src is safe with THIS package because its src folder is
-complete. It contains all earlier files and the v0.18.0 additions.
+complete. It contains all earlier files and the v0.19.0 additions.
 
 The paths must remain exactly as shown. For example:
 
@@ -38,24 +38,33 @@ latest commit from Railway.
 Message Content Intent must remain enabled in the Discord Developer Portal for
 modmail and ? prefix commands.
 
-The v0.18.0 commands are:
+The new v0.19.0 commands are:
 
-  /petition submit, status
-  /council propose
-  /staffapply
-  /event create, status, complete, cancel
+  /chronicle view, record
+  /season status, history, start, end
+  /housequest list, create, progress, cancel
+  /achievements view, grant, revoke
 
 The message-based commands are also available with the ? prefix. Staff
 applications use a Discord form, so that one must be opened with /staffapply.
 Run npm run commands:deploy so Discord receives the renamed and new commands.
 
-After deployment, the server owner must run:
+After deployment, a server manager should run:
 
-  /setup governance
+  /setup chronicles
 
-Choose the public petitions channel, private council channel, council/staff
-voting role, and private staff-application channel. Only the Discord server
-owner can use final accept/deny controls; staff votes remain advisory.
+Choose the public or read-only channel for Realm history. Grey Ghost will post
+the server-founding record immediately. House-season winners and jousting
+champions will be added automatically.
+
+Start the first House season when ready with:
+
+  /season start
+
+Starting a season resets current House scores. Ending it archives the scores,
+records the winning House (including ties), and awards member achievements.
+House quests are staff-verified and intentionally exclude generic participation
+and petition objectives.
 
 Configure the main server log after deployment with:
 
