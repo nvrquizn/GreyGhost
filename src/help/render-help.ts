@@ -49,6 +49,8 @@ export function renderHelp(member: GuildMember | null, isModmailStaff = false): 
           line("season history", "Review completed House seasons and winners."),
           line("housequest list", "View active and recent House quests."),
           line("achievements view", "View a member's earned achievements."),
+          line("dragon", "View the Dragon Registry or care for a bonded staff dragon."),
+          line("trade", "Trade coins and eligible inventory items with another character."),
         ].join("\n"),
       },
       {
@@ -128,5 +130,5 @@ export function renderHelp(member: GuildMember | null, isModmailStaff = false): 
   }
 
   return embed
-    .setFooter({ text: "Version 0.23.0 · Slash and ? prefix commands" });
+    .setFooter({ text: "Version 0.24.0 · Slash and ? prefix commands" });
 }

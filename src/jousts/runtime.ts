@@ -15,6 +15,7 @@ import { refreshStatsDashboard } from "../stats/dashboard.js";
 import { applyJoustInjury } from "../economy/store.js";
 import { publishChronicleEntry } from "../chronicles/runtime.js";
 import { createJoustSpoilClaim } from "../combat/store.js";
+import { grantChampionsRole } from "../events-manager/champions.js";
 
 function entrantLine(joust: Joust, userId: string): string {
   const entrant = joust.entrants[userId];
@@ -32,10 +33,9 @@ function matchLine(match: JoustMatch): string {
   return `<@${match.leftId}> **vs.** <@${match.rightId}> → <@${match.winnerId}> ${ending} (**+2** <@&${match.houseRoleId}>)`;
 }
 
-export function joustPodium(joust: Joust): string {
+export function joustPodiumIds(joust: Joust): string[] {
   const eliminatedInRound = new Map(joust.matches.map((match) => [match.loserId, match.round]));
-  const medals = ["🥇", "🥈", "🥉"];
-  const leaders = Object.values(joust.entrants)
+  return Object.values(joust.entrants)
     .sort((left, right) =>
       right.wins - left.wins
       || Number(right.active) - Number(left.active)
@@ -43,7 +43,13 @@ export function joustPodium(joust: Joust): string {
         - (eliminatedInRound.get(left.userId) ?? Number.MAX_SAFE_INTEGER)
       || left.userId.localeCompare(right.userId),
     )
-    .slice(0, 3);
+    .slice(0, 3)
+    .map((entrant) => entrant.userId);
+}
+
+export function joustPodium(joust: Joust): string {
+  const medals = ["🥇", "🥈", "🥉"];
+  const leaders = joustPodiumIds(joust).map((userId) => joust.entrants[userId]!).filter(Boolean);
   return leaders.length
     ? leaders.map((entrant, index) => `${medals[index]} <@${entrant.userId}> — **${entrant.wins}** tilt${entrant.wins === 1 ? "" : "s"} won · <@&${entrant.houseRoleId}>`).join("\n")
     : "No riders have entered the lists.";
@@ -128,6 +134,7 @@ export async function runJoustRound(guild: Guild, joustId: number, staffId: stri
   }
 
   if (result.joust.status === "finished") {
+    await grantChampionsRole(guild, joustPodiumIds(result.joust));
     const champions = result.joust.championIds.map((userId) => entrantLine(result.joust, userId)).join("\n");
     await channel.send({ embeds: [new EmbedBuilder()
       .setColor(0xd4af37)

@@ -410,6 +410,15 @@ Competitive jousts may now create rights of spoils, including capped coin claims
 
 Expeditions are multi-stage cooperative adventures. Hosts open a party with `/expedition create`, members join before departure, then vote on bold, cautious, or clever approaches at each stage. Party size, trained character stats, equipped mounts and armour, supplies, prior choices, difficulty, and a controlled random roll all affect outcomes.
 
-Successful journeys award coins and the **Expedition Veteran** achievement. Flawless expeditions also award one expedition cosmetic per explorer and can grant the **Expedition Pathfinder** role when that role exists. Strong expeditions are recorded in the Chronicles, and participating members can automatically advance an active **Service to the Realm** House quest for their configured House. Failed stages may cause only temporary bruised or wounded injuries; expeditions never delete characters or cause permanent catastrophe.
+Successful journeys award coins and the **Expedition Veteran** achievement. Flawless expeditions also award one expedition cosmetic per explorer. Strong expeditions are recorded in the Chronicles, and participating members can automatically advance an active **Service to the Realm** House quest for their configured House. Failed stages may cause only temporary bruised or wounded injuries; expeditions never delete characters or cause permanent catastrophe. Expedition party progress is maintained in a live plain-text channel message, with party pings when stages open or the journey returns.
 
 Commands: `/expedition create`, `/expedition join`, `/expedition leave`, `/expedition choose`, `/expedition status`, and `/expedition continue`.
+
+
+## v0.24.0 — Dragonriders, Trading & Live Expeditions
+
+Grey Ghost now maintains a permanent Dragon Registry for the moderator team. Dragons grow through real time and daily feeding, unlock training, flights, patrols and hunts as they mature, develop a rider bond, receive a stable daily mood, collect dragon-specific achievements, record encounters and official event appearances, and retain their complete history. When a member ceases to be a Dragonrider, their dragon becomes permanently wild: it remains visible in the registry and can never be claimed by another rider.
+
+Members with Realm characters can also open confirmation-based trades for eligible inventory items and coin. Both offers must be confirmed unchanged before the exchange completes; changing either side clears confirmations.
+
+Expeditions now keep a live text status in-channel showing the party and choice progress, and automatically ping party members when a stage opens or the expedition returns.

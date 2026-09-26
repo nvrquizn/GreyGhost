@@ -2,8 +2,9 @@ import { EmbedBuilder, MessageFlags, SlashCommandBuilder } from "discord.js";
 import type { Command } from "../types/command.js";
 import { createCharacter, getEconomyPlayer, renameCharacter } from "../economy/store.js";
 import { shopItemMap } from "../economy/catalogue.js";
+import { getDragons, getRiderDragon } from "../dragons/store.js";
 
-function card(name: string, userMention: string, player: NonNullable<Awaited<ReturnType<typeof getEconomyPlayer>>>): EmbedBuilder {
+function card(name: string, userMention: string, player: NonNullable<Awaited<ReturnType<typeof getEconomyPlayer>>>, dragonText?: string): EmbedBuilder {
   const mount = player.equippedMountId ? shopItemMap.get(player.equippedMountId)?.name ?? "Unknown" : "None";
   const armour = player.equippedArmourId ? shopItemMap.get(player.equippedArmourId)?.name ?? "Unknown" : "None";
   return new EmbedBuilder()
@@ -15,8 +16,9 @@ function card(name: string, userMention: string, player: NonNullable<Awaited<Ret
       { name: "Coin", value: `**${player.coins}**`, inline: true },
       { name: "Mount", value: mount, inline: true },
       { name: "Armour", value: armour, inline: true },
+      ...(dragonText ? [{ name: "Dragon", value: dragonText, inline: true }] : []),
     )
-    .setFooter({ text: "Equipment becomes part of jousting in v0.21.0." });
+    .setFooter({ text: "Realm character · progression, equipment, and combat" });
 }
 
 export const characterCommand: Command = {
@@ -66,6 +68,9 @@ export const characterCommand: Command = {
       await interaction.reply({ content: user.id === interaction.user.id ? "You have not created a Realm character yet. Use `/character create`." : "That member has not created a Realm character yet.", flags: MessageFlags.Ephemeral });
       return;
     }
-    await interaction.reply({ embeds: [card(player.character.name, `<@${user.id}>`, player)] });
+    const bondedDragon = await getRiderDragon(interaction.guildId, user.id);
+    const formerDragon = bondedDragon ? undefined : (await getDragons(interaction.guildId)).find((dragon) => dragon.formerRiderIds.includes(user.id));
+    const dragonText = bondedDragon ? `🐉 **${bondedDragon.name}** · Bonded` : formerDragon ? `🐉 **${formerDragon.name}** · Wild` : undefined;
+    await interaction.reply({ embeds: [card(player.character.name, `<@${user.id}>`, player, dragonText)] });
   },
 };

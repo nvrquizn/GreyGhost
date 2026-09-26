@@ -4,6 +4,7 @@ import { applyJoustInjury, grantCoins } from "../economy/store.js";
 import { addChronicleEntry, awardAchievement, changeHousePoints, getChronicleEntries, getGuildSettings } from "../services/guild-settings.js";
 import { publishChronicleEntry } from "../chronicles/runtime.js";
 import { cancelMelee, createMelee, enterMelee, getMelee, resolveMeleeRound, startMelee, type Melee } from "../combat/store.js";
+import { grantChampionsRole } from "../events-manager/champions.js";
 
 function canHost(interaction: { member: { permissions: { has(permission: bigint): boolean } }; user: { id: string } }, melee: Melee): boolean {
   return interaction.user.id === melee.hostId || interaction.member.permissions.has(PermissionFlagsBits.ManageGuild);
@@ -14,12 +15,18 @@ function roster(melee: Melee): string {
   return entrants.length ? entrants.map((entrant) => `${entrant.active ? "⚔️" : "☠️"} <@${entrant.userId}> · <@&${entrant.houseRoleId}> · **${entrant.wins}** win${entrant.wins === 1 ? "" : "s"}`).join("\n") : "No fighters have entered.";
 }
 
-async function giveChampionRole(interaction: import("discord.js").ChatInputCommandInteraction<"cached">, championId: string): Promise<void> {
-  const role = interaction.guild.roles.cache.find((candidate) => candidate.name.toLowerCase() === "champion of the melee");
-  if (!role || !role.editable) return;
-  await Promise.all([...role.members.values()].filter((member) => member.id !== championId).map((member) => member.roles.remove(role).catch(() => undefined)));
-  const champion = await interaction.guild.members.fetch(championId).catch(() => undefined);
-  if (champion) await champion.roles.add(role).catch(() => undefined);
+
+function meleePodiumIds(melee: Melee): string[] {
+  const eliminated = new Map(melee.matches.map((match) => [match.loserId, match.round]));
+  return Object.values(melee.entrants)
+    .sort((left, right) =>
+      Number(right.active) - Number(left.active)
+      || (eliminated.get(right.userId) ?? Number.MAX_SAFE_INTEGER) - (eliminated.get(left.userId) ?? Number.MAX_SAFE_INTEGER)
+      || right.wins - left.wins
+      || left.userId.localeCompare(right.userId),
+    )
+    .slice(0, 3)
+    .map((entrant) => entrant.userId);
 }
 
 function idOption(sub: import("discord.js").SlashCommandSubcommandBuilder) {
@@ -115,7 +122,7 @@ export const meleeCommand: Command = {
         const houseRoleId = result.melee.entrants[championId]?.houseRoleId;
         if (houseRoleId) await changeHousePoints(interaction.guildId, { houseRoleId, delta: 5, reason: `Grand melee #${meleeId} champion`, memberId: championId, staffId: interaction.user.id });
         await awardAchievement(interaction.guildId, championId, "melee-champion");
-        await giveChampionRole(interaction, championId);
+        await grantChampionsRole(interaction.guild, meleePodiumIds(result.melee));
         embed.setColor(0xd4af37).addFields({ name: "Champion", value: `<@${championId}> wins **20 coins**, **5 bonus House Points**, and the **Grand Melee Champion** achievement.` });
 
         const sourceKey = `melee:${meleeId}`;

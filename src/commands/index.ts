@@ -57,6 +57,8 @@ import { recoveryCommand } from "./recovery.js";
 import { spoilsCommand } from "./spoils.js";
 import { meleeCommand } from "./melee.js";
 import { expeditionCommand } from "./expedition.js";
+import { dragonCommand } from "./dragon.js";
+import { tradeCommand } from "./trade.js";
 
 export const commands: Command[] = [
   pingCommand,
@@ -116,6 +118,8 @@ export const commands: Command[] = [
   spoilsCommand,
   meleeCommand,
   expeditionCommand,
+  dragonCommand,
+  tradeCommand,
 ];
 
 export const commandMap = new Map(

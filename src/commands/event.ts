@@ -8,6 +8,7 @@ import type { Command } from "../types/command.js";
 import { parseReminderDuration } from "./remindme.js";
 import { createRealmEvent, getRealmEvent, updateRealmEvent } from "../services/guild-settings.js";
 import { renderRealmEvent } from "../events-manager/render.js";
+import { grantChampionsRole } from "../events-manager/champions.js";
 
 function attendeeList(ids: string[]): string {
   return ids.length ? ids.slice(0, 30).map((id) => `<@${id}>`).join(", ").slice(0, 1024) : "None";
@@ -28,6 +29,11 @@ export const eventCommand: Command = {
       .addStringOption((option) => option.setName("location").setDescription("Discord channel, voice room, game, or other location.").setMaxLength(100)))
     .addSubcommand((subcommand) => subcommand.setName("status").setDescription("View an event's RSVP lists.")
       .addIntegerOption((option) => option.setName("event-id").setDescription("The event number.").setMinValue(1).setRequired(true)))
+    .addSubcommand((subcommand) => subcommand.setName("podium").setDescription("Record the top three finishers for a competitive event.")
+      .addIntegerOption((option) => option.setName("event-id").setDescription("The event number.").setMinValue(1).setRequired(true))
+      .addUserOption((option) => option.setName("first").setDescription("First place.").setRequired(true))
+      .addUserOption((option) => option.setName("second").setDescription("Second place."))
+      .addUserOption((option) => option.setName("third").setDescription("Third place.")))
     .addSubcommand((subcommand) => subcommand.setName("complete").setDescription("Mark an event complete and close RSVPs.")
       .addIntegerOption((option) => option.setName("event-id").setDescription("The event number.").setMinValue(1).setRequired(true)))
     .addSubcommand((subcommand) => subcommand.setName("cancel").setDescription("Cancel an event and close RSVPs.")
@@ -71,6 +77,32 @@ export const eventCommand: Command = {
       await interaction.reply({ content: "Only the event host or a server manager can control this event.", flags: MessageFlags.Ephemeral });
       return;
     }
+    if (subcommand === "podium") {
+      const podiumIds = [
+        interaction.options.getUser("first", true).id,
+        interaction.options.getUser("second")?.id,
+        interaction.options.getUser("third")?.id,
+      ].filter((id): id is string => Boolean(id));
+      const unique = [...new Set(podiumIds)];
+      if (unique.length !== podiumIds.length) {
+        await interaction.reply({ content: "Each podium place must be a different member.", flags: MessageFlags.Ephemeral });
+        return;
+      }
+      const updated = await updateRealmEvent(interaction.guildId, eventId, { podiumIds: unique });
+      if (!updated) return;
+      await grantChampionsRole(interaction.guild, unique);
+      const channel = await interaction.guild.channels.fetch(updated.channelId).catch(() => null);
+      if (channel?.isTextBased() && "messages" in channel) {
+        const message = await channel.messages.fetch(updated.messageId).catch(() => null);
+        if (message) {
+          const rendered = renderRealmEvent(updated);
+          await message.edit({ embeds: [rendered.embed], components: [rendered.row] });
+        }
+      }
+      await interaction.reply({ content: `The podium for Event #${eventId} has been recorded.`, flags: MessageFlags.Ephemeral });
+      return;
+    }
+
     if (subcommand === "status") {
       await interaction.reply({ embeds: [new EmbedBuilder()
         .setColor(0x7188a0)

@@ -7,6 +7,7 @@ import {
   getExpedition,
   joinExpedition,
   leaveExpedition,
+  setExpeditionStatusMessage,
   type Expedition,
   type ExpeditionChoice,
 } from "../expeditions/store.js";
@@ -69,15 +70,36 @@ function expeditionEmbed(expedition: Expedition): EmbedBuilder {
   return embed;
 }
 
-async function givePathfinderRole(interaction: import("discord.js").ChatInputCommandInteraction<"cached">, expedition: Expedition): Promise<void> {
-  const role = interaction.guild.roles.cache.find((candidate) => candidate.name.toLowerCase() === "expedition pathfinder");
-  if (!role || !role.editable) return;
-  const party = new Set(Object.keys(expedition.participants));
-  await Promise.all([...role.members.values()].filter((member) => !party.has(member.id)).map((member) => member.roles.remove(role).catch(() => undefined)));
-  for (const userId of party) {
-    const member = await interaction.guild.members.fetch(userId).catch(() => undefined);
-    if (member) await member.roles.add(role).catch(() => undefined);
+
+function expeditionLiveText(expedition: Expedition): string {
+  const party = Object.keys(expedition.participants);
+  const mentions = party.length ? party.map((id) => `<@${id}>`).join(" ") : "No explorers have joined yet.";
+  if (expedition.status === "lobby") {
+    return `🧭 **Expedition #${expedition.id} · ${expedition.title}**\n**Status:** Gathering\n**Party (${party.length}):** ${mentions}\n\nJoin with \`/expedition join expedition-id:${expedition.id}\`.`;
   }
+  if (expedition.status === "finished") {
+    return `🧭 **Expedition #${expedition.id} · ${expedition.title}**\n**Status:** Returned\n**Party:** ${mentions}\n**Result:** ${expedition.successes}/4 stages succeeded.`;
+  }
+  const voted = party.filter((id) => expedition.votes[id]);
+  const waiting = party.filter((id) => !expedition.votes[id]);
+  return `🧭 **Expedition #${expedition.id} · ${expedition.title}**\n**Party:** ${mentions}\n**Stage ${expedition.stage}/4:** ${stageNames[expedition.stage]}\n**Choices received:** ${voted.length}/${party.length}\n✅ **Chosen:** ${voted.length ? voted.map((id) => `<@${id}>`).join(" ") : "None yet"}\n⏳ **Waiting:** ${waiting.length ? waiting.map((id) => `<@${id}>`).join(" ") : "Everyone has chosen"}\n\nUse \`/expedition choose\` to choose your approach.`;
+}
+
+async function refreshExpeditionLiveMessage(guild: import("discord.js").Guild, expedition: Expedition): Promise<void> {
+  if (!expedition.statusMessageId) return;
+  const channel = await guild.channels.fetch(expedition.channelId).catch(() => null);
+  if (!channel?.isTextBased() || !("messages" in channel)) return;
+  const message = await channel.messages.fetch(expedition.statusMessageId).catch(() => null);
+  if (!message) return;
+  await message.edit({ content: expeditionLiveText(expedition), embeds: [], allowedMentions: { parse: [] } }).catch(() => undefined);
+}
+
+async function pingExpeditionParty(guild: import("discord.js").Guild, expedition: Expedition, text: string): Promise<void> {
+  const ids = Object.keys(expedition.participants);
+  if (!ids.length) return;
+  const channel = await guild.channels.fetch(expedition.channelId).catch(() => null);
+  if (!channel?.isSendable()) return;
+  await channel.send({ content: `${ids.map((id) => `<@${id}>`).join(" ")} — ${text}`, allowedMentions: { users: ids } }).catch(() => undefined);
 }
 
 async function progressHouseQuests(interaction: import("discord.js").ChatInputCommandInteraction<"cached">, expedition: Expedition): Promise<void> {
@@ -122,8 +144,6 @@ async function finishExpedition(interaction: import("discord.js").ChatInputComma
       await grantCosmetic(interaction.guildId, party[index]!, cosmeticRewards[index % cosmeticRewards.length]!);
     }
     rewardLines.push("A flawless expedition also awards each explorer an **expedition cosmetic**.");
-    await givePathfinderRole(interaction, expedition);
-    rewardLines.push("The current party receives the **Expedition Pathfinder** title if that role exists.");
   }
 
   await progressHouseQuests(interaction, expedition);
@@ -185,7 +205,8 @@ export const expeditionCommand: Command = {
         hostId: interaction.user.id,
         channelId: interaction.channelId,
       });
-      await interaction.reply({ embeds: [expeditionEmbed(expedition).setDescription(`The party is gathering. Join with \`/expedition join expedition-id:${expedition.id}\`.\n\nCharacters, training, mounts, armour, supplies, party size, choices, and a controlled random roll all influence the journey.`)] });
+      const message = await interaction.reply({ content: expeditionLiveText(expedition), fetchReply: true });
+      await setExpeditionStatusMessage(interaction.guildId, expedition.id, message.id);
       return;
     }
 
@@ -199,6 +220,7 @@ export const expeditionCommand: Command = {
     if (sub === "join") {
       try {
         const updated = await joinExpedition(interaction.guildId, expeditionId, interaction.user.id);
+        await refreshExpeditionLiveMessage(interaction.guild, updated);
         await interaction.reply({ content: `You joined **${updated.title}**.`, flags: MessageFlags.Ephemeral });
       } catch (error) {
         const code = (error as Error).message;
@@ -209,7 +231,8 @@ export const expeditionCommand: Command = {
 
     if (sub === "leave") {
       try {
-        await leaveExpedition(interaction.guildId, expeditionId, interaction.user.id);
+        const updated = await leaveExpedition(interaction.guildId, expeditionId, interaction.user.id);
+        await refreshExpeditionLiveMessage(interaction.guild, updated);
         await interaction.reply({ content: `You left **${expedition.title}**.`, flags: MessageFlags.Ephemeral });
       } catch {
         await interaction.reply({ content: "You can only leave while the expedition is still gathering.", flags: MessageFlags.Ephemeral });
@@ -220,7 +243,8 @@ export const expeditionCommand: Command = {
     if (sub === "choose") {
       const choice = interaction.options.getString("approach", true) as ExpeditionChoice;
       try {
-        await chooseExpedition(interaction.guildId, expeditionId, interaction.user.id, choice);
+        const updated = await chooseExpedition(interaction.guildId, expeditionId, interaction.user.id, choice);
+        await refreshExpeditionLiveMessage(interaction.guild, updated);
         await interaction.reply({ content: `Your choice is recorded: **${choiceLabels[choice]}**.`, flags: MessageFlags.Ephemeral });
       } catch (error) {
         const code = (error as Error).message;
@@ -243,7 +267,9 @@ export const expeditionCommand: Command = {
     try {
       const outcome = await continueExpedition(interaction.guildId, expeditionId, expedition.hostId);
       if (outcome.started) {
-        await interaction.reply({ embeds: [expeditionEmbed(outcome.expedition).setDescription("The expedition has departed. Every explorer should now choose an approach.")] });
+        await refreshExpeditionLiveMessage(interaction.guild, outcome.expedition);
+        await pingExpeditionParty(interaction.guild, outcome.expedition, `**${outcome.expedition.title}** has departed. Stage 1 is live; make your choices.`);
+        await interaction.reply({ content: `Expedition #${outcome.expedition.id} has departed. The live party message will update as choices arrive.`, flags: MessageFlags.Ephemeral });
         return;
       }
 
@@ -268,6 +294,11 @@ export const expeditionCommand: Command = {
       if (outcome.expedition.status === "finished") {
         const rewards = await finishExpedition(interaction, outcome.expedition);
         embed.addFields({ name: "The party returns", value: rewards.join("\n").slice(0, 1024) });
+        await refreshExpeditionLiveMessage(interaction.guild, outcome.expedition);
+        await pingExpeditionParty(interaction.guild, outcome.expedition, `**${outcome.expedition.title}** has returned with ${outcome.expedition.successes}/4 successful stages.`);
+      } else {
+        await refreshExpeditionLiveMessage(interaction.guild, outcome.expedition);
+        await pingExpeditionParty(interaction.guild, outcome.expedition, `Stage ${result.stage} is complete. **Stage ${outcome.expedition.stage} · ${stageNames[outcome.expedition.stage]}** is now awaiting your choices.`);
       }
       await interaction.reply({ embeds: [embed] });
     } catch (error) {

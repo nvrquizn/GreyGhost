@@ -383,3 +383,55 @@ export async function replaceGuildEconomy(guildId: string, value: unknown): Prom
 }
 
 export const economyGuildSchema = guildEconomySchema;
+
+export async function executeTradeTransfer(
+  guildId: string,
+  leftId: string,
+  rightId: string,
+  leftOffer: { coins: number; itemIds: string[] },
+  rightOffer: { coins: number; itemIds: string[] },
+): Promise<void> {
+  await mutate((data) => {
+    const left = ensurePlayer(data, guildId, leftId);
+    const right = ensurePlayer(data, guildId, rightId);
+    if (left.coins < leftOffer.coins || right.coins < rightOffer.coins) throw new Error("TRADE_INSUFFICIENT_COINS");
+
+    const validateItems = (player: EconomyPlayer, itemIds: string[]) => {
+      const needed = new Map<string, number>();
+      for (const id of itemIds) needed.set(id, (needed.get(id) ?? 0) + 1);
+      for (const [id, count] of needed) {
+        const item = shopItemMap.get(id);
+        if (!item) throw new Error("ITEM_NOT_FOUND");
+        if ((item.category === "mount" || item.category === "armour") && item.tier === 1) throw new Error("STARTER_ITEM_BOUND");
+        if (player.inventory.filter((owned) => owned === id).length < count) throw new Error("TRADE_ITEM_NOT_OWNED");
+      }
+    };
+    validateItems(left, leftOffer.itemIds);
+    validateItems(right, rightOffer.itemIds);
+
+    const removeItems = (player: EconomyPlayer, itemIds: string[]) => {
+      for (const id of itemIds) {
+        const index = player.inventory.indexOf(id);
+        if (index >= 0) player.inventory.splice(index, 1);
+        if (player.equippedMountId === id && !player.inventory.includes(id)) delete player.equippedMountId;
+        if (player.equippedArmourId === id && !player.inventory.includes(id)) delete player.equippedArmourId;
+      }
+    };
+    removeItems(left, leftOffer.itemIds);
+    removeItems(right, rightOffer.itemIds);
+    left.inventory.push(...rightOffer.itemIds);
+    right.inventory.push(...leftOffer.itemIds);
+
+    left.coins = left.coins - leftOffer.coins + rightOffer.coins;
+    right.coins = right.coins - rightOffer.coins + leftOffer.coins;
+    const now = Date.now();
+    if (leftOffer.coins || rightOffer.coins) {
+      const leftNet = rightOffer.coins - leftOffer.coins;
+      const rightNet = leftOffer.coins - rightOffer.coins;
+      if (leftNet) left.coinHistory.push({ amount: leftNet, reason: "Player trade", createdAt: now });
+      if (rightNet) right.coinHistory.push({ amount: rightNet, reason: "Player trade", createdAt: now });
+      left.coinHistory = left.coinHistory.slice(-100);
+      right.coinHistory = right.coinHistory.slice(-100);
+    }
+  });
+}

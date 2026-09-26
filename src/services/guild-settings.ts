@@ -103,6 +103,7 @@ const realmEventSchema = z.object({
   going: z.array(z.string()).max(2000),
   interested: z.array(z.string()).max(2000),
   declined: z.array(z.string()).max(2000),
+  podiumIds: z.array(z.string()).max(3).default([]),
   createdAt: z.number().int().positive(),
 });
 
@@ -838,6 +839,7 @@ export async function createRealmEvent(
       going: [],
       interested: [],
       declined: [],
+      podiumIds: [],
       createdAt: Date.now(),
     });
     state.nextEventNumber += 1;

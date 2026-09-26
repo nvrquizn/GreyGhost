@@ -26,6 +26,7 @@ const expeditionSchema = z.object({
   title: z.string().min(1).max(100),
   hostId: z.string(),
   channelId: z.string(),
+  statusMessageId: z.string().optional(),
   difficulty: expeditionDifficultySchema,
   status: z.enum(["lobby", "active", "finished"]),
   participants: z.record(z.string(), participantSchema),
@@ -109,6 +110,16 @@ export async function createExpedition(
     });
     guild.expeditions[String(id)] = expedition;
     return expedition;
+  });
+}
+
+
+export async function setExpeditionStatusMessage(guildId: string, expeditionId: number, messageId: string): Promise<Expedition> {
+  return mutate((data) => {
+    const expedition = guildOf(data, guildId).expeditions[String(expeditionId)];
+    if (!expedition) throw new Error("EXPEDITION_NOT_FOUND");
+    expedition.statusMessageId = messageId;
+    return expeditionSchema.parse(expedition);
   });
 }
 

@@ -27,6 +27,7 @@ import { registerReminderRuntime } from "./reminders/runtime.js";
 import { registerGovernanceInteractions } from "./governance/runtime.js";
 import { registerEventManagerInteractions } from "./events-manager/runtime.js";
 import { registerChronicleRuntime } from "./chronicles/runtime.js";
+import { registerDragonRuntime } from "./dragons/runtime.js";
 
 const client = new Client({
   intents: [
@@ -59,6 +60,7 @@ registerReminderRuntime(client);
 registerGovernanceInteractions(client);
 registerEventManagerInteractions(client);
 registerChronicleRuntime(client);
+registerDragonRuntime(client);
 
 client.once(Events.ClientReady, (readyClient) => {
   readyClient.user.setActivity("the mists of Dragonstone", {
