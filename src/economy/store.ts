@@ -32,6 +32,7 @@ const playerSchema = z.object({
   lastDailyAt: z.number().int().positive().optional(),
   lastTrainingAt: z.number().int().positive().optional(),
   inventory: z.array(z.string()).max(250).default([]),
+  cosmetics: z.array(z.string()).max(100).default([]),
   equippedMountId: z.string().optional(),
   equippedArmourId: z.string().optional(),
   injury: injurySchema.optional(),
@@ -112,6 +113,7 @@ export async function createCharacter(guildId: string, userId: string, name: str
       coins: 0,
       coinHistory: [],
       inventory: [],
+      cosmetics: [],
     });
     guild.players[userId] = player;
     return player;
@@ -221,6 +223,32 @@ export async function consumeItem(guildId: string, userId: string, itemId: strin
     const index = player.inventory.indexOf(itemId);
     if (index < 0) throw new Error("ITEM_NOT_OWNED");
     player.inventory.splice(index, 1);
+    return player;
+  });
+}
+
+
+export async function grantCosmetic(guildId: string, targetId: string, cosmeticId: string): Promise<EconomyPlayer> {
+  return mutate((data) => {
+    const player = ensurePlayer(data, guildId, targetId);
+    if (!player.cosmetics.includes(cosmeticId)) player.cosmetics.push(cosmeticId);
+    return player;
+  });
+}
+
+export async function applyExpeditionInjury(guildId: string, userId: string, reason: string, random: () => number = Math.random): Promise<EconomyPlayer | undefined> {
+  if (random() >= 0.4) return undefined;
+  const severity: InjurySeverity = random() < 0.25 ? "wounded" : "bruised";
+  const hours = severity === "wounded" ? 36 : 18;
+  return mutate((data) => {
+    const player = guildOf(data, guildId).players[userId];
+    if (!player) return undefined;
+    player.injury = {
+      severity,
+      reason,
+      createdAt: Date.now(),
+      clearsAt: Date.now() + hours * 60 * 60 * 1000,
+    };
     return player;
   });
 }

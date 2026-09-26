@@ -404,3 +404,12 @@ Joust losers now have a chance to receive a temporary injury. Field Bandages can
 ## v0.22.0 — Spoils, ransoms & grand melees
 
 Competitive jousts may now create rights of spoils, including capped coin claims and ransomable non-starter equipment. Grand melees add horse-free last-fighter-standing tournaments driven by character training and equipped armour. Use `/spoils` and `/melee` to access the new systems.
+
+
+## v0.23.0 — Expeditions
+
+Expeditions are multi-stage cooperative adventures. Hosts open a party with `/expedition create`, members join before departure, then vote on bold, cautious, or clever approaches at each stage. Party size, trained character stats, equipped mounts and armour, supplies, prior choices, difficulty, and a controlled random roll all affect outcomes.
+
+Successful journeys award coins and the **Expedition Veteran** achievement. Flawless expeditions also award one expedition cosmetic per explorer and can grant the **Expedition Pathfinder** role when that role exists. Strong expeditions are recorded in the Chronicles, and participating members can automatically advance an active **Service to the Realm** House quest for their configured House. Failed stages may cause only temporary bruised or wounded injuries; expeditions never delete characters or cause permanent catastrophe.
+
+Commands: `/expedition create`, `/expedition join`, `/expedition leave`, `/expedition choose`, `/expedition status`, and `/expedition continue`.

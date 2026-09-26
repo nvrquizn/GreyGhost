@@ -3,6 +3,13 @@ import type { Command } from "../types/command.js";
 import { countInventoryItem, shopItemMap, shopItems } from "../economy/catalogue.js";
 import { clearExpiredInjury, getEconomyPlayer } from "../economy/store.js";
 
+const cosmeticNames: Record<string, string> = {
+  "expedition-silver-saddlecloth": "Silver Expedition Saddlecloth",
+  "expedition-crimson-saddlecloth": "Crimson Expedition Saddlecloth",
+  "expedition-weathered-cloak": "Weathered Pathfinder Cloak",
+  "expedition-gilded-clasp": "Gilded Pathfinder Clasp",
+};
+
 export const inventoryCommand: Command = {
   data: new SlashCommandBuilder().setName("inventory").setDescription("View your owned equipment and supplies.").setDMPermission(false),
   async execute(interaction) {
@@ -16,6 +23,7 @@ export const inventoryCommand: Command = {
       const count = countInventoryItem(player.inventory, item.id);
       return count > 0 ? `${item.name} ×${count}` : undefined;
     }).filter(Boolean);
+    const cosmetics = player.cosmetics.map((id) => cosmeticNames[id] ?? id);
     const injury = player.injury
       ? `**${player.injury.severity}** from ${player.injury.reason}${player.injury.clearsAt ? `\nClears <t:${Math.floor(player.injury.clearsAt / 1000)}:R> unless treated.` : ""}`
       : "None";
@@ -23,6 +31,7 @@ export const inventoryCommand: Command = {
       { name: "Mounts", value: mounts.join("\n") || "None" },
       { name: "Armour", value: armour.join("\n") || "None" },
       { name: "Supplies", value: supplies.join("\n") || "None" },
+      { name: "Cosmetics", value: cosmetics.join("\n") || "None" },
       { name: "Injury", value: injury },
     ).setFooter({ text: "⚔️ = equipped" })], flags: MessageFlags.Ephemeral });
   },

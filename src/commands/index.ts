@@ -56,6 +56,7 @@ import { grantCommand } from "./grant.js";
 import { recoveryCommand } from "./recovery.js";
 import { spoilsCommand } from "./spoils.js";
 import { meleeCommand } from "./melee.js";
+import { expeditionCommand } from "./expedition.js";
 
 export const commands: Command[] = [
   pingCommand,
@@ -114,6 +115,7 @@ export const commands: Command[] = [
   recoveryCommand,
   spoilsCommand,
   meleeCommand,
+  expeditionCommand,
 ];
 
 export const commandMap = new Map(

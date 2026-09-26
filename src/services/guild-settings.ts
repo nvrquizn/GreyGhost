@@ -113,7 +113,7 @@ const eventsSchema = z.object({
 
 const chronicleEntrySchema = z.object({
   id: z.number().int().positive(),
-  type: z.enum(["server_creation", "house_season", "joust_champion", "melee_champion", "manual"]),
+  type: z.enum(["server_creation", "house_season", "joust_champion", "melee_champion", "expedition_discovery", "manual"]),
   title: z.string().min(1).max(120),
   description: z.string().min(1).max(2000),
   occurredAt: z.number().int().positive(),

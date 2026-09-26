@@ -12,6 +12,7 @@ const typeLabels = {
   house_season: "House Season",
   joust_champion: "Tourney Champion",
   melee_champion: "Grand Melee Champion",
+  expedition_discovery: "Expedition Discovery",
   manual: "Realm Record",
 } as const;
 
