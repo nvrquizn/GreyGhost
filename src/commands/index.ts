@@ -43,6 +43,15 @@ import { chronicleCommand } from "./chronicle.js";
 import { achievementsCommand } from "./achievements.js";
 import { seasonCommand } from "./season.js";
 import { houseQuestCommand } from "./housequest.js";
+import { characterCommand } from "./character.js";
+import { dailyCommand } from "./daily.js";
+import { coinCommand } from "./coin.js";
+import { shopCommand } from "./shop.js";
+import { buyCommand } from "./buy.js";
+import { inventoryCommand } from "./inventory.js";
+import { stableCommand } from "./stable.js";
+import { armouryCommand } from "./armoury.js";
+import { loadoutCommand } from "./loadout.js";
 
 export const commands: Command[] = [
   pingCommand,
@@ -88,6 +97,15 @@ export const commands: Command[] = [
   achievementsCommand,
   seasonCommand,
   houseQuestCommand,
+  characterCommand,
+  dailyCommand,
+  coinCommand,
+  shopCommand,
+  buyCommand,
+  inventoryCommand,
+  stableCommand,
+  armouryCommand,
+  loadoutCommand,
 ];
 
 export const commandMap = new Map(

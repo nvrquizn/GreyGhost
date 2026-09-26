@@ -51,6 +51,20 @@ export function renderHelp(member: GuildMember | null, isModmailStaff = false): 
           line("achievements view", "View a member's earned achievements."),
         ].join("\n"),
       },
+      {
+        name: "Progression & Equipment",
+        value: [
+          line("character", "Create, view, or rename a Realm character."),
+          line("daily", "Claim daily coin or train Health, Damage, or Resistance."),
+          line("coin", "Check your coin purse and transaction history."),
+          line("shop", "Browse mounts and armour for sale."),
+          line("buy", "Purchase equipment with coin."),
+          line("inventory", "View all equipment you own."),
+          line("stable", "View your owned mounts."),
+          line("armoury", "View your owned armour."),
+          line("loadout", "Equip and inspect your mount and armour."),
+        ].join("\n"),
+      },
     );
 
   if (eventManager) embed.addFields({
@@ -114,5 +128,5 @@ export function renderHelp(member: GuildMember | null, isModmailStaff = false): 
   }
 
   return embed
-    .setFooter({ text: "Version 0.19.0 · Slash and ? prefix commands" });
+    .setFooter({ text: "Version 0.20.0 · Slash and ? prefix commands" });
 }

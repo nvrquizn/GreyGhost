@@ -16,8 +16,9 @@ import {
   replaceGuildSuggestions,
   suggestionSchema,
 } from "../services/suggestions.js";
+import { economyGuildSchema, exportGuildEconomy, replaceGuildEconomy } from "../economy/store.js";
 
-const backupSchema = z.object({
+const backupV1Schema = z.object({
   format: z.literal("grey-ghost-server-backup"),
   version: z.literal(1),
   createdAt: z.string().datetime(),
@@ -26,6 +27,13 @@ const backupSchema = z.object({
   settings: guildSettingsSchema,
   suggestions: z.array(suggestionSchema),
 });
+
+const backupV2Schema = backupV1Schema.omit({ version: true }).extend({
+  version: z.literal(2),
+  economy: economyGuildSchema,
+});
+
+const backupSchema = z.union([backupV2Schema, backupV1Schema]);
 
 export const backupCommand: Command = {
   data: new SlashCommandBuilder()
@@ -60,14 +68,15 @@ export const backupCommand: Command = {
 
     if (subcommand === "create") {
       await interaction.deferReply({ flags: MessageFlags.Ephemeral });
-      const backup = backupSchema.parse({
+      const backup = backupV2Schema.parse({
         format: "grey-ghost-server-backup",
-        version: 1,
+        version: 2,
         createdAt: new Date().toISOString(),
         guildId: interaction.guildId,
         guildName: interaction.guild.name,
         settings: await getGuildSettings(interaction.guildId),
         suggestions: await getGuildSuggestions(interaction.guildId),
+        economy: await exportGuildEconomy(interaction.guildId),
       });
       const date = new Date().toISOString().slice(0, 10);
       const file = new AttachmentBuilder(Buffer.from(`${JSON.stringify(backup, null, 2)}\n`), {
@@ -77,7 +86,7 @@ export const backupCommand: Command = {
 
       await interaction.editReply({
         content:
-          "Backup created. Keep this file private: it contains server configuration, petition votes, council records, and staff applications.",
+          "Backup created. Keep this file private: it contains server configuration, economy records, petition votes, council records, and staff applications.",
         files: [file],
       });
       return;
@@ -120,7 +129,7 @@ export const backupCommand: Command = {
 
     const result = backupSchema.safeParse(parsed);
     if (!result.success) {
-      await interaction.editReply("That is not a valid Grey Ghost v1 server backup.");
+      await interaction.editReply("That is not a valid Grey Ghost server backup.");
       return;
     }
     if (result.data.guildId !== interaction.guildId) {
@@ -130,6 +139,7 @@ export const backupCommand: Command = {
 
     await replaceGuildSettings(interaction.guildId, result.data.settings);
     await replaceGuildSuggestions(interaction.guildId, result.data.suggestions);
+    if (result.data.version === 2) await replaceGuildEconomy(interaction.guildId, result.data.economy);
     await interaction.editReply(
       `Backup from <t:${Math.floor(new Date(result.data.createdAt).getTime() / 1000)}:F> restored. Run \`/setup check\` to validate its channels, roles, and permissions.`,
     );

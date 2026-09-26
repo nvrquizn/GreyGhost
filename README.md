@@ -201,6 +201,27 @@ Other achievements are awarded automatically for winning a first jousting tilt,
 winning a jousting tournament, and finishing first in a quiz. The server owner
 receives **Founder of the Realm** when the founding Chronicle is established.
 
+
+## Characters, coin, training, and equipment
+
+Version 0.20.0 adds persistent Realm characters and the first progression/economy layer.
+Create a character with `/character create`; character records hold Health, Damage,
+and Resistance training, coin, owned gear, and the currently equipped mount/armour.
+
+`/daily claim` awards **2–5 coins** once every 24 hours. `/daily train` raises one
+of Health, Damage, or Resistance by one point on its own 24-hour cooldown. Coin
+transactions are retained in `/coin history`.
+
+The first equipment catalogue has five mount and armour tiers at **1, 15, 50,
+100, and 150 coins**: Worn Courser / Padded Armour, Trained Courser /
+Boiled-Leather Armour, Swift War Courser / Mail Hauberk, Battle Destrier /
+Plate-and-Mail, and Champion’s Destrier / Castle-Forged Plate. Use `/shop`,
+`/buy`, `/inventory`, `/stable`, `/armoury`, and `/loadout` to manage them.
+
+Equipment bonuses, upgrades, injuries, recovery, bandages, ransom/spoils, and
+deeper jousting integration remain intentionally reserved for v0.21.0. Economy
+data is stored in `data/economy.json` and is included in v2 server backups.
+
 ## ASOIAF directory
 
 The starter directory contains Houses, major characters, and dragons relevant
