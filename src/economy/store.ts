@@ -16,6 +16,15 @@ const injurySchema = z.object({
   clearsAt: z.number().int().positive().optional(),
 });
 
+const heirloomSchema = z.object({
+  id: z.string().min(1).max(24),
+  name: z.string().min(1).max(80),
+  type: z.enum(["sword", "dagger", "shield", "crown", "ring", "banner", "relic", "other"]),
+  description: z.string().max(500).default(""),
+  grantedAt: z.number().int().positive(),
+  grantedBy: z.string(),
+});
+
 const characterSchema = z.object({
   name: z.string().min(1).max(40),
   createdAt: z.number().int().positive(),
@@ -23,6 +32,11 @@ const characterSchema = z.object({
   health: z.number().int().min(0).max(1000).default(0),
   damage: z.number().int().min(0).max(1000).default(0),
   resistance: z.number().int().min(0).max(1000).default(0),
+  renown: z.number().int().min(0).default(0),
+  heirlooms: z.array(heirloomSchema).max(100).default([]),
+  duelWeekKey: z.string().optional(),
+  duelWeekCount: z.number().int().min(0).max(5).default(0),
+  duelWeekOpponents: z.array(z.string()).max(5).default([]),
 });
 
 const playerSchema = z.object({
@@ -48,6 +62,8 @@ export type EconomyPlayer = z.infer<typeof playerSchema>;
 export type EconomyGuild = z.infer<typeof guildEconomySchema>;
 export type CharacterStat = "health" | "damage" | "resistance";
 export type InjurySeverity = "bruised" | "wounded" | "maimed";
+export type Heirloom = z.infer<typeof heirloomSchema>;
+export type HeirloomType = Heirloom["type"];
 
 export interface JoustBonuses {
   health: number;
@@ -383,6 +399,109 @@ export async function replaceGuildEconomy(guildId: string, value: unknown): Prom
 }
 
 export const economyGuildSchema = guildEconomySchema;
+
+
+export function renownTitle(renown: number): string {
+  if (renown >= 600) return "Legendary";
+  if (renown >= 300) return "Celebrated";
+  if (renown >= 150) return "Renowned";
+  if (renown >= 75) return "Noted";
+  if (renown >= 25) return "Recognized";
+  return "Unknown";
+}
+
+export async function changeRenown(guildId: string, userId: string, delta: number): Promise<EconomyPlayer> {
+  if (!Number.isSafeInteger(delta) || delta === 0) throw new Error("INVALID_RENOWN_DELTA");
+  return mutate((data) => {
+    const player = ensurePlayer(data, guildId, userId);
+    player.character.renown = Math.max(0, player.character.renown + delta);
+    player.character.updatedAt = Date.now();
+    return player;
+  });
+}
+
+export async function renownLeaderboard(guildId: string, limit = 10): Promise<Array<{ userId: string; renown: number; name: string }>> {
+  const guild = (await load())[guildId];
+  if (!guild) return [];
+  return Object.entries(guild.players)
+    .map(([userId, player]) => ({ userId, renown: player.character.renown, name: player.character.name }))
+    .sort((a, b) => b.renown - a.renown || a.name.localeCompare(b.name))
+    .slice(0, limit);
+}
+
+export async function getRenownMap(guildId: string, userIds: string[]): Promise<Map<string, number>> {
+  const guild = (await load())[guildId];
+  return new Map(userIds.map((userId) => [userId, guild?.players[userId]?.character.renown ?? 0]));
+}
+
+function duelWeekKey(now = new Date()): string {
+  const d = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate()));
+  const day = d.getUTCDay() || 7;
+  d.setUTCDate(d.getUTCDate() - day + 1);
+  return d.toISOString().slice(0, 10);
+}
+
+export async function getDuelAllowance(guildId: string, userId: string): Promise<{ used: number; remaining: number; weekKey: string }> {
+  const player = await getEconomyPlayer(guildId, userId);
+  if (!player) throw new Error("CHARACTER_REQUIRED");
+  const key = duelWeekKey();
+  const used = player.character.duelWeekKey === key ? player.character.duelWeekCount : 0;
+  return { used, remaining: Math.max(0, 5 - used), weekKey: key };
+}
+
+export async function completeDuelProgress(guildId: string, winnerId: string, loserId: string, random: () => number = Math.random): Promise<{ winner: EconomyPlayer; loser: EconomyPlayer; winnerStat: CharacterStat; loserStat: CharacterStat }> {
+  return mutate((data) => {
+    const winner = ensurePlayer(data, guildId, winnerId);
+    const loser = ensurePlayer(data, guildId, loserId);
+    const key = duelWeekKey();
+    for (const player of [winner, loser]) {
+      if (player.character.duelWeekKey !== key) {
+        player.character.duelWeekKey = key;
+        player.character.duelWeekCount = 0;
+        player.character.duelWeekOpponents = [];
+      }
+      if (player.character.duelWeekCount >= 5) throw new Error("DUEL_WEEK_LIMIT");
+    }
+    if (winner.character.duelWeekOpponents.includes(loserId) || loser.character.duelWeekOpponents.includes(winnerId)) throw new Error("DUEL_OPPONENT_ALREADY_FOUGHT");
+    winner.character.duelWeekCount += 1;
+    loser.character.duelWeekCount += 1;
+    winner.character.duelWeekOpponents.push(loserId);
+    loser.character.duelWeekOpponents.push(winnerId);
+    const stats: CharacterStat[] = ["health", "damage", "resistance"];
+    const winnerStat = stats[Math.floor(random() * stats.length)]!;
+    const loserStat = stats[Math.floor(random() * stats.length)]!;
+    winner.character[winnerStat] += 1;
+    loser.character[loserStat] += 1;
+    winner.character.renown += 2;
+    loser.character.renown += 1;
+    const now = Date.now();
+    winner.character.updatedAt = now;
+    loser.character.updatedAt = now;
+    return { winner, loser, winnerStat, loserStat };
+  });
+}
+
+export async function grantHeirloom(guildId: string, userId: string, input: { name: string; type: HeirloomType; description?: string; grantedBy: string }): Promise<Heirloom> {
+  return mutate((data) => {
+    const player = ensurePlayer(data, guildId, userId);
+    const id = `h${Date.now().toString(36)}${Math.random().toString(36).slice(2, 6)}`;
+    const item = heirloomSchema.parse({ id, name: input.name.trim(), type: input.type, description: input.description ?? "", grantedAt: Date.now(), grantedBy: input.grantedBy });
+    player.character.heirlooms.push(item);
+    player.character.updatedAt = Date.now();
+    return item;
+  });
+}
+
+export async function renameHeirloom(guildId: string, userId: string, heirloomId: string, name: string): Promise<Heirloom> {
+  return mutate((data) => {
+    const player = ensurePlayer(data, guildId, userId);
+    const item = player.character.heirlooms.find((candidate) => candidate.id === heirloomId);
+    if (!item) throw new Error("HEIRLOOM_NOT_FOUND");
+    item.name = name.trim();
+    player.character.updatedAt = Date.now();
+    return item;
+  });
+}
 
 export async function executeTradeTransfer(
   guildId: string,

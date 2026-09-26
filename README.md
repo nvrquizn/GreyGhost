@@ -34,6 +34,8 @@ current build supports both slash commands and role-aware `?` prefix commands.
 - `/setup reaction-logs` — chooses a separate private channel for reaction activity
 - `/setup chronicles` — chooses the channel for permanent Realm history and
   immediately publishes the server-founding record
+- `/setup champions-role` — chooses the Discord role awarded to top-three competitive event finishers
+- `/setup tourney-summons` — chooses the ping role used outside embeds when competitions are published
 - `/backup create` and `/backup restore` — export or restore server-specific bot data
 - `/selfroles configure` — selects up to 25 roles for a self-role panel
 - `/selfroles emoji` — assigns an emoji to a configured role button
@@ -93,6 +95,11 @@ current build supports both slash commands and role-aware `?` prefix commands.
   `/joust cancel` — host automated House tournaments
 - `/joust enter`, `/joust withdraw`, and `/joust status` — manage entries and
   inspect the lists
+- `/melee create`, `/melee publish`, `/melee enter`, `/melee start`, `/melee next`, and `/melee status` — run horse-free grand melees
+- `/duel challenge`, `/duel accept`, `/duel decline`, `/duel cancel`, and `/duel status` — run weekly training duels
+- `/renown view` and `/renown leaderboard` — view permanent character reputation; managers may use `/renown grant`
+- `/heirloom list`, `/heirloom view`, and `/heirloom rename` — manage named weapons and heirlooms; managers may grant them
+- `/prize view` and `/prize choose` — inspect and claim pending Admirer-role event prizes
 - Welcomes new members at the gates of King's Landing
 - Automatically assigns the configured newcomer role
 - Records member joins and departures in a private log channel
@@ -221,6 +228,17 @@ Plate-and-Mail, and Champion’s Destrier / Castle-Forged Plate. Use `/shop`,
 Equipment bonuses, upgrades, injuries, recovery, bandages, ransom/spoils, and
 deeper jousting integration remain intentionally reserved for v0.21.0. Economy
 data is stored in `data/economy.json` and is included in v2 server backups.
+
+
+## Duels, Renown, heirlooms, and event prizes
+
+Version 0.25.0 adds weekly character duels, permanent Renown, named weapons and heirlooms, and a shared competitive-event reward framework. Characters may complete up to five training duels per week against different opponents. Both duelists gain one point in a randomly selected training stat; the winner earns 2 Renown and the loser earns 1.
+
+Renown is visible on character cards and `/renown`, but never creates a Discord role. Joust pairing becomes Renown-aware only when at least one active rider has Renown; otherwise Grey Ghost keeps the original randomized cross-House draw.
+
+Configure `/setup champions-role` and `/setup tourney-summons` once. Joust and grand-melee publication then pings Tourney Summons in normal message text outside the embed, directs members to the correct channel, and displays the Admirer-role prize package. Top-three finishers receive Champions. First place chooses one or two Admirer roles; second place uses a per-event player/Grey Ghost/shared choice mode; third place receives Grey Ghost's choice. Automatic selections reroll if the recipient already owns the role.
+
+Named weapons and heirlooms are permanent cosmetic/lore records attached to Realm characters. They do not currently add hidden combat power.
 
 ## ASOIAF directory
 

@@ -11,6 +11,7 @@ import {
 import { validJoustBuild } from "../jousts/engine.js";
 import { getEconomyPlayer } from "../economy/store.js";
 import { beginJoust, joustPodium, publishJoustLobby, runJoustRound } from "../jousts/runtime.js";
+import { createPrizePackage, isApprovedAdmirerRole, type SecondPrizeMode } from "../events-manager/prizes.js";
 
 function canHost(interaction: { member: { permissions: { has(permission: bigint): boolean } }; user: { id: string } }, hostId: string): boolean {
   return interaction.user.id === hostId || interaction.member.permissions.has(PermissionFlagsBits.ManageGuild);
@@ -31,7 +32,15 @@ export const joustCommand: Command = {
         { name: "Competitive — spoils enabled", value: "competitive" },
         { name: "Casual — no spoils", value: "casual" },
       )))
-    .addSubcommand((sub) => idOption(sub.setName("publish").setDescription("Open a joust lobby.")))
+    .addSubcommand((sub) => idOption(sub.setName("publish").setDescription("Open a joust lobby and announce its prizes."))
+      .addStringOption((option) => option.setName("second-reward").setDescription("Override Grey Ghost's second-place reward method.").addChoices(
+        { name: "Auto", value: "auto" },
+        { name: "Second place chooses one", value: "player" },
+        { name: "Grey Ghost chooses one", value: "ghost" },
+        { name: "Grey Ghost chooses one + second place chooses one", value: "shared" },
+      ))
+      .addRoleOption((option) => option.setName("second-admirer").setDescription("Optional preset Admirer role for Grey Ghost's second-place choice."))
+      .addRoleOption((option) => option.setName("third-admirer").setDescription("Optional preset Admirer role for third place.")))
     .addSubcommand((sub) => idOption(sub.setName("enter").setDescription("Enter or update your entry in an open joust."))
       .addStringOption((option) => option.setName("horse").setDescription("Choose your mount.").setRequired(true).addChoices(
         { name: "Destrier — sturdier", value: "destrier" },
@@ -149,7 +158,26 @@ export const joustCommand: Command = {
         await interaction.reply({ content: "Configure at least two roles in the **House Allegiance** panel first.", flags: MessageFlags.Ephemeral });
         return;
       }
-      await publishJoustLobby(interaction.guild, joust);
+      const secondMode = (interaction.options.getString("second-reward") ?? "auto") as SecondPrizeMode | "auto";
+      const secondRole = interaction.options.getRole("second-admirer");
+      const thirdRole = interaction.options.getRole("third-admirer");
+      if (secondRole && secondMode === "player") {
+        await interaction.reply({ content: "If second place is choosing their own prize, leave `second-admirer` blank or use Grey Ghost/shared.", flags: MessageFlags.Ephemeral });
+        return;
+      }
+      if ((secondRole && !isApprovedAdmirerRole(secondRole)) || (thirdRole && !isApprovedAdmirerRole(thirdRole))) {
+        await interaction.reply({ content: "Preset prizes must be roles from Grey Ghost's approved Admirer-role pool.", flags: MessageFlags.Ephemeral });
+        return;
+      }
+      const pack = await createPrizePackage(interaction.guild, {
+        kind: "joust",
+        eventId: joust.id,
+        title: joust.title,
+        secondMode,
+        secondRole,
+        thirdRole,
+      });
+      await publishJoustLobby(interaction.guild, joust, pack);
       await interaction.reply({ content: `Joust #${joustId} lobby published.`, flags: MessageFlags.Ephemeral });
       return;
     }

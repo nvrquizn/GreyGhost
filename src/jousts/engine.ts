@@ -112,6 +112,38 @@ export function drawCrossHousePairings<T extends { userId: string; houseRoleId: 
   return { pairs, byes: remaining.map((entrant) => entrant.userId) };
 }
 
+
+export function drawRenownAwarePairings<T extends { userId: string; houseRoleId: string }>(
+  entrants: T[],
+  renown: Map<string, number>,
+  random: () => number = Math.random,
+): PairingDraw {
+  if (!entrants.some((entrant) => (renown.get(entrant.userId) ?? 0) > 0)) return drawCrossHousePairings(entrants, random);
+  const remaining = [...entrants].sort((a, b) => (renown.get(b.userId) ?? 0) - (renown.get(a.userId) ?? 0) || (random() < 0.5 ? -1 : 1));
+  const pairs: JoustPairing[] = [];
+  while (remaining.length > 1) {
+    const left = remaining.shift()!;
+    let bestIndex = -1;
+    let bestDifference = Number.POSITIVE_INFINITY;
+    for (let i = 0; i < remaining.length; i += 1) {
+      const candidate = remaining[i]!;
+      if (candidate.houseRoleId === left.houseRoleId) continue;
+      const difference = Math.abs((renown.get(candidate.userId) ?? 0) - (renown.get(left.userId) ?? 0));
+      if (difference < bestDifference) {
+        bestDifference = difference;
+        bestIndex = i;
+      }
+    }
+    if (bestIndex < 0) {
+      remaining.unshift(left);
+      break;
+    }
+    const right = remaining.splice(bestIndex, 1)[0]!;
+    pairs.push({ leftId: left.userId, rightId: right.userId });
+  }
+  return { pairs, byes: remaining.map((entrant) => entrant.userId) };
+}
+
 export function simulateTilt(left: JoustFighter, right: JoustFighter, random: () => number = Math.random): TiltResult {
   const horse = {
     destrier: { health: 3, damage: 0, resistance: 1 },

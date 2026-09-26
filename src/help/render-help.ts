@@ -51,6 +51,10 @@ export function renderHelp(member: GuildMember | null, isModmailStaff = false): 
           line("achievements view", "View a member's earned achievements."),
           line("dragon", "View the Dragon Registry or care for a bonded staff dragon."),
           line("trade", "Trade coins and eligible inventory items with another character."),
+          line("duel", "Challenge another character; up to five completed duels per week."),
+          line("renown", "View permanent Realm Renown and standings."),
+          line("heirloom", "View named weapons and heirlooms."),
+          line("prize", "Claim pending Admirer-role event prizes."),
         ].join("\n"),
       },
       {
@@ -75,6 +79,7 @@ export function renderHelp(member: GuildMember | null, isModmailStaff = false): 
       line("event", "Create and manage events with RSVP tracking."),
       line("quiz", "Create and host live quizzes."),
       line("joust", "Create, publish, and run jousting tournaments."),
+      line("melee", "Create, publish, and run grand melees."),
     ].join("\n"),
   });
 
@@ -130,5 +135,5 @@ export function renderHelp(member: GuildMember | null, isModmailStaff = false): 
   }
 
   return embed
-    .setFooter({ text: "Version 0.24.2 · Slash and ? prefix commands" });
+    .setFooter({ text: "Version 0.25.0 · Slash and ? prefix commands" });
 }

@@ -12,10 +12,11 @@ import {
   type JoustMatch,
 } from "../services/guild-settings.js";
 import { refreshStatsDashboard } from "../stats/dashboard.js";
-import { applyJoustInjury } from "../economy/store.js";
+import { applyJoustInjury, changeRenown } from "../economy/store.js";
 import { publishChronicleEntry } from "../chronicles/runtime.js";
 import { createJoustSpoilClaim } from "../combat/store.js";
 import { grantChampionsRole } from "../events-manager/champions.js";
+import { finalizePrizePackage, finalizedPrizeText, prizeAnnouncementText, type EventPrizePackage } from "../events-manager/prizes.js";
 
 function entrantLine(joust: Joust, userId: string): string {
   const entrant = joust.entrants[userId];
@@ -55,12 +56,16 @@ export function joustPodium(joust: Joust): string {
     : "No riders have entered the lists.";
 }
 
-export async function publishJoustLobby(guild: Guild, joust: Joust): Promise<Joust> {
+export async function publishJoustLobby(guild: Guild, joust: Joust, prizePackage?: EventPrizePackage): Promise<Joust> {
   const channel = await guild.channels.fetch(joust.channelId);
   if (!channel || channel.type !== ChannelType.GuildText) throw new Error("JOUST_CHANNEL_INVALID");
   const updated = await updateJoust(guild.id, joust.id, { status: "lobby" });
   if (!updated) throw new Error("JOUST_NOT_FOUND");
+  const settings = await getGuildSettings(guild.id);
+  const summons = settings.tourneySummonsRoleId ? `<@&${settings.tourneySummonsRoleId}>` : undefined;
   const message = await channel.send({
+    content: summons ? `${summons} — go to <#${joust.channelId}> and type \`/joust enter joust-id:${joust.id}\` to join.` : undefined,
+    allowedMentions: summons ? { roles: [settings.tourneySummonsRoleId!] } : undefined,
     embeds: [new EmbedBuilder()
       .setColor(0x87ceeb)
       .setTitle(`Joust #${joust.id} · ${joust.title}`)
@@ -70,6 +75,7 @@ export async function publishJoustLobby(guild: Guild, joust: Joust): Promise<Jou
         { name: "Mounts", value: "**Destrier:** greater health and resistance.\n**Courser:** greater striking power." },
         { name: "Rules", value: `No same-House tilts. If everyone selects the same House, Grey Ghost randomly spreads riders across available Houses. Each tilt won earns that House **2 points**.\n**Stakes:** ${joust.competitive ? "Competitive — winners gain a right of spoils after each tilt." : "Casual — no spoils or ransoms."}` },
         { name: "Host", value: `<@${joust.hostId}>`, inline: true },
+        ...(prizePackage ? [{ name: "Rewards", value: prizeAnnouncementText(prizePackage).slice(0, 1024) }] : []),
       )
       .setFooter({ text: "You may update your entry or withdraw until the host begins." })],
   });
@@ -134,13 +140,19 @@ export async function runJoustRound(guild: Guild, joustId: number, staffId: stri
   }
 
   if (result.joust.status === "finished") {
-    await grantChampionsRole(guild, joustPodiumIds(result.joust));
+    const podiumIds = joustPodiumIds(result.joust);
+    await grantChampionsRole(guild, podiumIds);
+    const prizeResult = await finalizePrizePackage(guild, `joust:${result.joust.id}`, podiumIds);
+    await Promise.all(podiumIds.map((userId, index) => changeRenown(guild.id, userId, [5, 3, 2][index] ?? 1).catch(() => undefined)));
     const champions = result.joust.championIds.map((userId) => entrantLine(result.joust, userId)).join("\n");
     await channel.send({ embeds: [new EmbedBuilder()
       .setColor(0xd4af37)
       .setTitle(`${result.joust.title} · Champion${result.joust.championIds.length === 1 ? "" : "s"}`)
       .setDescription(champions || "The lists closed without a champion.")
-      .addFields({ name: "Top Three Riders", value: joustPodium(result.joust) })
+      .addFields(
+        { name: "Top Three Riders", value: joustPodium(result.joust) },
+        ...(prizeResult ? [{ name: "Prizes", value: finalizedPrizeText(prizeResult).slice(0, 1024) }] : []),
+      )
       .setFooter({ text: result.joust.championIds.length > 1 ? "Only riders of one House remained, so they share the victory." : `Joust #${joustId} concluded` })] });
     await Promise.all(result.joust.championIds.map((userId) => awardAchievement(guild.id, userId, "tourney-champion")));
     const sourceKey = `joust:${result.joust.id}`;

@@ -9,7 +9,23 @@ import {
   receiveTransferredItem,
   payRansom,
   injuryPenalty,
+  completeDuelProgress,
+  getDuelAllowance,
 } from "../economy/store.js";
+
+
+const duelSchema = z.object({
+  id: z.number().int().positive(),
+  challengerId: z.string(),
+  opponentId: z.string(),
+  status: z.enum(["pending", "completed", "declined", "cancelled"]),
+  winnerId: z.string().optional(),
+  loserId: z.string().optional(),
+  challengerScore: z.number().int().optional(),
+  opponentScore: z.number().int().optional(),
+  createdAt: z.number().int().positive(),
+  resolvedAt: z.number().int().positive().optional(),
+});
 
 const spoilChoiceSchema = z.enum(["coins", "mount", "armour"]);
 const spoilClaimSchema = z.object({
@@ -52,7 +68,7 @@ const meleeSchema = z.object({
   title: z.string().min(1).max(100),
   hostId: z.string(),
   channelId: z.string(),
-  status: z.enum(["lobby", "active", "finished", "cancelled"]),
+  status: z.enum(["draft", "lobby", "active", "finished", "cancelled"]),
   entrants: z.record(z.string(), meleeEntrantSchema),
   matches: z.array(meleeMatchSchema).max(2000),
   round: z.number().int().min(0),
@@ -61,6 +77,8 @@ const meleeSchema = z.object({
 });
 
 const combatGuildSchema = z.object({
+  nextDuelNumber: z.number().int().positive().default(1),
+  duels: z.record(z.string(), duelSchema).default({}),
   nextSpoilNumber: z.number().int().positive().default(1),
   spoils: z.record(z.string(), spoilClaimSchema).default({}),
   nextMeleeNumber: z.number().int().positive().default(1),
@@ -69,6 +87,7 @@ const combatGuildSchema = z.object({
 
 const combatFileSchema = z.record(z.string(), combatGuildSchema);
 
+export type Duel = z.infer<typeof duelSchema>;
 export type SpoilClaim = z.infer<typeof spoilClaimSchema>;
 export type SpoilChoice = z.infer<typeof spoilChoiceSchema>;
 export type Melee = z.infer<typeof meleeSchema>;
@@ -108,7 +127,92 @@ async function mutate<T>(fn: (data: Record<string, CombatGuild>) => T | Promise<
 }
 
 function guildOf(data: Record<string, CombatGuild>, guildId: string): CombatGuild {
-  return (data[guildId] ??= { nextSpoilNumber: 1, spoils: {}, nextMeleeNumber: 1, melees: {} });
+  return (data[guildId] ??= { nextDuelNumber: 1, duels: {}, nextSpoilNumber: 1, spoils: {}, nextMeleeNumber: 1, melees: {} });
+}
+
+
+export async function challengeDuel(guildId: string, challengerId: string, opponentId: string): Promise<Duel> {
+  if (challengerId === opponentId) throw new Error("DUEL_SELF");
+  await getDuelAllowance(guildId, challengerId);
+  await getDuelAllowance(guildId, opponentId);
+  if (!(await getEconomyPlayer(guildId, challengerId)) || !(await getEconomyPlayer(guildId, opponentId))) throw new Error("CHARACTER_REQUIRED");
+  return mutate((data) => {
+    const guild = guildOf(data, guildId);
+    const existing = Object.values(guild.duels).find((duel) => duel.status === "pending" && ((duel.challengerId === challengerId && duel.opponentId === opponentId) || (duel.challengerId === opponentId && duel.opponentId === challengerId)));
+    if (existing) throw new Error("DUEL_PENDING_EXISTS");
+    const id = guild.nextDuelNumber++;
+    const duel = duelSchema.parse({ id, challengerId, opponentId, status: "pending", createdAt: Date.now() });
+    guild.duels[String(id)] = duel;
+    return duel;
+  });
+}
+
+export async function getDuel(guildId: string, duelId: number): Promise<Duel | undefined> {
+  return (await load())[guildId]?.duels[String(duelId)];
+}
+
+export async function listMemberDuels(guildId: string, userId: string): Promise<Duel[]> {
+  return Object.values((await load())[guildId]?.duels ?? {}).filter((duel) => duel.challengerId === userId || duel.opponentId === userId).sort((a, b) => b.id - a.id);
+}
+
+export async function declineDuel(guildId: string, duelId: number, userId: string): Promise<Duel> {
+  return mutate((data) => {
+    const duel = guildOf(data, guildId).duels[String(duelId)];
+    if (!duel) throw new Error("DUEL_NOT_FOUND");
+    if (duel.opponentId !== userId) throw new Error("DUEL_NOT_OPPONENT");
+    if (duel.status !== "pending") throw new Error("DUEL_NOT_PENDING");
+    duel.status = "declined";
+    duel.resolvedAt = Date.now();
+    return duelSchema.parse(duel);
+  });
+}
+
+export async function cancelDuel(guildId: string, duelId: number, userId: string): Promise<Duel> {
+  return mutate((data) => {
+    const duel = guildOf(data, guildId).duels[String(duelId)];
+    if (!duel) throw new Error("DUEL_NOT_FOUND");
+    if (duel.challengerId !== userId) throw new Error("DUEL_NOT_CHALLENGER");
+    if (duel.status !== "pending") throw new Error("DUEL_NOT_PENDING");
+    duel.status = "cancelled";
+    duel.resolvedAt = Date.now();
+    return duelSchema.parse(duel);
+  });
+}
+
+async function duelScore(guildId: string, userId: string, random: () => number): Promise<number> {
+  const player = await getEconomyPlayer(guildId, userId);
+  if (!player) throw new Error("CHARACTER_REQUIRED");
+  const armour = player.equippedArmourId ? shopItemMap.get(player.equippedArmourId) : undefined;
+  const training = player.character.health + player.character.damage + player.character.resistance;
+  const gear = (armour?.bonuses?.health ?? 0) + (armour?.bonuses?.damage ?? 0) + (armour?.bonuses?.resistance ?? 0);
+  return 1 + Math.floor(random() * 20) + training + gear - injuryPenalty(player.injury?.severity);
+}
+
+export async function acceptDuel(guildId: string, duelId: number, userId: string, random: () => number = Math.random): Promise<{ duel: Duel; winnerStat: string; loserStat: string }> {
+  const current = await getDuel(guildId, duelId);
+  if (!current) throw new Error("DUEL_NOT_FOUND");
+  if (current.opponentId !== userId) throw new Error("DUEL_NOT_OPPONENT");
+  if (current.status !== "pending") throw new Error("DUEL_NOT_PENDING");
+  const challengerAllowance = await getDuelAllowance(guildId, current.challengerId);
+  const opponentAllowance = await getDuelAllowance(guildId, current.opponentId);
+  if (!challengerAllowance.remaining || !opponentAllowance.remaining) throw new Error("DUEL_WEEK_LIMIT");
+  let challengerScore = await duelScore(guildId, current.challengerId, random);
+  let opponentScore = await duelScore(guildId, current.opponentId, random);
+  if (challengerScore === opponentScore) (random() < 0.5 ? challengerScore++ : opponentScore++);
+  const winnerId = challengerScore > opponentScore ? current.challengerId : current.opponentId;
+  const loserId = winnerId === current.challengerId ? current.opponentId : current.challengerId;
+  const progress = await completeDuelProgress(guildId, winnerId, loserId, random);
+  const duel = await mutate((data) => {
+    const entry = guildOf(data, guildId).duels[String(duelId)]!;
+    entry.status = "completed";
+    entry.winnerId = winnerId;
+    entry.loserId = loserId;
+    entry.challengerScore = challengerScore;
+    entry.opponentScore = opponentScore;
+    entry.resolvedAt = Date.now();
+    return duelSchema.parse(entry);
+  });
+  return { duel, winnerStat: progress.winnerStat, loserStat: progress.loserStat };
 }
 
 export async function createJoustSpoilClaim(
@@ -208,9 +312,19 @@ export async function createMelee(guildId: string, input: { title: string; hostI
   return mutate((data) => {
     const guild = guildOf(data, guildId);
     const id = guild.nextMeleeNumber++;
-    const melee = meleeSchema.parse({ ...input, id, status: "lobby", entrants: {}, matches: [], round: 0, createdAt: Date.now() });
+    const melee = meleeSchema.parse({ ...input, id, status: "draft", entrants: {}, matches: [], round: 0, createdAt: Date.now() });
     guild.melees[String(id)] = melee;
     return melee;
+  });
+}
+
+export async function publishMelee(guildId: string, meleeId: number): Promise<Melee> {
+  return mutate((data) => {
+    const melee = guildOf(data, guildId).melees[String(meleeId)];
+    if (!melee) throw new Error("MELEE_NOT_FOUND");
+    if (melee.status !== "draft") throw new Error("MELEE_NOT_DRAFT");
+    melee.status = "lobby";
+    return meleeSchema.parse(melee);
   });
 }
 
@@ -309,7 +423,7 @@ export async function cancelMelee(guildId: string, meleeId: number): Promise<Mel
 }
 
 export async function exportGuildCombat(guildId: string): Promise<CombatGuild> {
-  return combatGuildSchema.parse((await load())[guildId] ?? { nextSpoilNumber: 1, spoils: {}, nextMeleeNumber: 1, melees: {} });
+  return combatGuildSchema.parse((await load())[guildId] ?? { nextDuelNumber: 1, duels: {}, nextSpoilNumber: 1, spoils: {}, nextMeleeNumber: 1, melees: {} });
 }
 
 export async function replaceGuildCombat(guildId: string, value: unknown): Promise<void> {

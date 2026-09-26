@@ -87,6 +87,18 @@ export async function diagnoseGuildSetup(guild: Guild): Promise<SetupDiagnostics
     result.warnings.push("Petitions, council proposals, and staff applications are not configured.");
   }
 
+
+  for (const [label, roleId] of [["Champions role", settings.championsRoleId], ["Tourney Summons role", settings.tourneySummonsRoleId]] as const) {
+    if (!roleId) {
+      result.warnings.push(`${label} is not configured.`);
+      continue;
+    }
+    const role = guild.roles.cache.get(roleId);
+    if (!role) result.errors.push(`${label} was deleted.`);
+    else if (label === "Champions role" && !role.editable) result.errors.push(`Grey Ghost cannot assign ${role}. Move Grey Ghost's role above it.`);
+    else result.passed.push(`${label} is available.`);
+  }
+
   if (!settings.newcomerRoleId) {
     result.warnings.push("The newcomer role is not configured.");
   } else {

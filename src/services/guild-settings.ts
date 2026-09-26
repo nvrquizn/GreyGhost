@@ -5,10 +5,11 @@ import { randomBytes } from "node:crypto";
 import {
   balanceJoustHouses,
   drawCrossHousePairings,
+  drawRenownAwarePairings,
   simulateTilt,
   validJoustBuild,
 } from "../jousts/engine.js";
-import { getJoustBonuses } from "../economy/store.js";
+import { getJoustBonuses, getRenownMap } from "../economy/store.js";
 
 const collectionSetSchema = z
   .object({
@@ -382,6 +383,26 @@ export const loreEntrySchema = z.object({
   updatedAt: z.number().optional(),
 });
 
+const eventPrizeClaimSchema = z.object({
+  choiceSlots: z.number().int().min(0).max(2).default(0),
+  chosenRoleIds: z.array(z.string()).max(2).default([]),
+  automaticRoleIds: z.array(z.string()).max(2).default([]),
+});
+
+const eventPrizePackageSchema = z.object({
+  key: z.string().min(1).max(100),
+  kind: z.enum(["joust", "melee", "race", "festival", "event"]),
+  eventId: z.number().int().positive(),
+  title: z.string().min(1).max(120),
+  secondMode: z.enum(["player", "ghost", "shared"]),
+  secondGhostRoleName: z.string().max(100).optional(),
+  thirdGhostRoleName: z.string().max(100).optional(),
+  podiumIds: z.array(z.string()).max(3).default([]),
+  claims: z.record(z.string(), eventPrizeClaimSchema).default({}),
+  createdAt: z.number().int().positive(),
+  finalizedAt: z.number().int().positive().optional(),
+});
+
 export const guildSettingsSchema = z.object({
   welcomeChannelId: z.string().optional(),
   logChannelId: z.string().optional(),
@@ -396,6 +417,9 @@ export const guildSettingsSchema = z.object({
   chronicleChannelId: z.string().optional(),
   moderatorRoleId: z.string().optional(),
   dragonGrantChannelId: z.string().optional(),
+  championsRoleId: z.string().optional(),
+  tourneySummonsRoleId: z.string().optional(),
+  eventPrizePackages: z.record(z.string(), eventPrizePackageSchema).optional(),
   collectionSets: z.record(z.string(), collectionSetSchema).optional(),
   selfRolePanels: z
     .record(
@@ -436,6 +460,7 @@ export const guildSettingsSchema = z.object({
 const settingsFileSchema = z.record(z.string(), guildSettingsSchema);
 
 export type GuildSettings = z.infer<typeof guildSettingsSchema>;
+export type EventPrizePackage = NonNullable<GuildSettings["eventPrizePackages"]>[string];
 export type SelfRolePanel = NonNullable<GuildSettings["selfRolePanels"]>[string];
 export type CollectionSet = NonNullable<GuildSettings["collectionSets"]>[string];
 export type MemberProfile = NonNullable<GuildSettings["memberProfiles"]>[string];
@@ -527,6 +552,8 @@ export async function clearGuildSetting(
     delete current.statsMessageId;
     delete current.chronicleChannelId;
     delete current.moderatorRoleId;
+    delete current.championsRoleId;
+    delete current.tourneySummonsRoleId;
     settings[guildId] = current;
   } else {
     const current = { ...settings[guildId] };
@@ -1843,7 +1870,8 @@ export async function resolveJoustRound(
       return;
     }
 
-    const draw = drawCrossHousePairings(active, random);
+    const renown = await getRenownMap(guildId, active.map((entrant) => entrant.userId));
+    const draw = drawRenownAwarePairings(active, renown, random);
     if (!draw.pairs.length) throw new Error("NO_VALID_JOUST_PAIRING");
     const round = joust.round + 1;
     const entrants = structuredClone(joust.entrants);

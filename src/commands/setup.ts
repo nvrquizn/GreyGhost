@@ -35,6 +35,8 @@ function settingsSummary(settings: GuildSettings): string {
     `**Chronicles:** ${settings.chronicleChannelId ? `<#${settings.chronicleChannelId}>` : "Not configured"}`,
     `**Moderator role:** ${settings.moderatorRoleId ? `<@&${settings.moderatorRoleId}>` : "Not configured"}`,
     `**Dragon grant channel:** ${settings.dragonGrantChannelId ? `<#${settings.dragonGrantChannelId}>` : "Not configured (Grey Ghost will DM recipients)"}`,
+    `**Champions role:** ${settings.championsRoleId ? `<@&${settings.championsRoleId}>` : "Not configured"}`,
+    `**Tourney Summons:** ${settings.tourneySummonsRoleId ? `<@&${settings.tourneySummonsRoleId}>` : "Not configured"}`,
     `**Modmail:** ${settings.modmail ? `tickets in <#${settings.modmail.categoryId}> · staff <@&${settings.modmail.staffRoleId}> · logs <#${settings.modmail.logChannelId}>` : "Not configured"}`,
     `**Moderation logs:** ${settings.moderation ? `<#${settings.moderation.logChannelId}>` : "Not configured"}`,
   ].join("\n");
@@ -190,6 +192,18 @@ export const setupCommand: Command = {
     )
     .addSubcommand((subcommand) =>
       subcommand
+        .setName("champions-role")
+        .setDescription("Choose the role awarded to top-three competitive event finishers.")
+        .addRoleOption((option) => option.setName("role").setDescription("The Champions role.").setRequired(true)),
+    )
+    .addSubcommand((subcommand) =>
+      subcommand
+        .setName("tourney-summons")
+        .setDescription("Choose the ping role used when competitions are published.")
+        .addRoleOption((option) => option.setName("role").setDescription("The Tourney Summons role.").setRequired(true)),
+    )
+    .addSubcommand((subcommand) =>
+      subcommand
         .setName("clear")
         .setDescription("Disable one or all onboarding settings.")
         .addStringOption((option) =>
@@ -212,6 +226,8 @@ export const setupCommand: Command = {
               { name: "Chronicles channel", value: "chronicleChannelId" },
               { name: "Moderator role", value: "moderatorRoleId" },
               { name: "Dragon grant channel", value: "dragonGrantChannelId" },
+              { name: "Champions role", value: "championsRoleId" },
+              { name: "Tourney Summons role", value: "tourneySummonsRoleId" },
               { name: "All basic server settings", value: "all" },
             ),
         ),
@@ -304,6 +320,29 @@ ${settingsSummary(settings)}`,
         content: `Special dragon grants will be announced in ${channel}. If Grey Ghost cannot post there, the recipient will be DM'd instead.\n\n${settingsSummary(settings)}`,
         flags: MessageFlags.Ephemeral,
       });
+      return;
+    }
+
+
+    if (subcommand === "champions-role") {
+      const role = interaction.options.getRole("role", true);
+      if (role.id === interaction.guild.roles.everyone.id) {
+        await interaction.reply({ content: "Choose a dedicated Champions role—not @everyone.", flags: MessageFlags.Ephemeral });
+        return;
+      }
+      const settings = await updateGuildSettings(interaction.guildId, { championsRoleId: role.id });
+      await interaction.reply({ content: `${role} will now be awarded to top-three finishers in supported competitive events.\n\n${settingsSummary(settings)}`, flags: MessageFlags.Ephemeral });
+      return;
+    }
+
+    if (subcommand === "tourney-summons") {
+      const role = interaction.options.getRole("role", true);
+      if (role.id === interaction.guild.roles.everyone.id) {
+        await interaction.reply({ content: "Choose a dedicated Tourney Summons role—not @everyone.", flags: MessageFlags.Ephemeral });
+        return;
+      }
+      const settings = await updateGuildSettings(interaction.guildId, { tourneySummonsRoleId: role.id });
+      await interaction.reply({ content: `${role} will be pinged outside event embeds when jousts, melees, races, and festivals are published.\n\n${settingsSummary(settings)}`, flags: MessageFlags.Ephemeral });
       return;
     }
 

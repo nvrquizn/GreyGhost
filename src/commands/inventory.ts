@@ -24,6 +24,7 @@ export const inventoryCommand: Command = {
       return count > 0 ? `${item.name} ×${count}` : undefined;
     }).filter(Boolean);
     const cosmetics = player.cosmetics.map((id) => cosmeticNames[id] ?? id);
+    const heirlooms = player.character.heirlooms.map((item) => `**${item.name}** · ${item.type}`);
     const injury = player.injury
       ? `**${player.injury.severity}** from ${player.injury.reason}${player.injury.clearsAt ? `\nClears <t:${Math.floor(player.injury.clearsAt / 1000)}:R> unless treated.` : ""}`
       : "None";
@@ -32,6 +33,7 @@ export const inventoryCommand: Command = {
       { name: "Armour", value: armour.join("\n") || "None" },
       { name: "Supplies", value: supplies.join("\n") || "None" },
       { name: "Cosmetics", value: cosmetics.join("\n") || "None" },
+      { name: "Named Weapons & Heirlooms", value: heirlooms.join("\n").slice(0, 1024) || "None" },
       { name: "Injury", value: injury },
     ).setFooter({ text: "⚔️ = equipped" })], flags: MessageFlags.Ephemeral });
   },

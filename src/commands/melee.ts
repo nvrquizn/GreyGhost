@@ -1,10 +1,11 @@
 import { EmbedBuilder, MessageFlags, PermissionFlagsBits, SlashCommandBuilder } from "discord.js";
 import type { Command } from "../types/command.js";
-import { applyJoustInjury, grantCoins } from "../economy/store.js";
+import { applyJoustInjury, grantCoins, changeRenown } from "../economy/store.js";
 import { addChronicleEntry, awardAchievement, changeHousePoints, getChronicleEntries, getGuildSettings } from "../services/guild-settings.js";
 import { publishChronicleEntry } from "../chronicles/runtime.js";
-import { cancelMelee, createMelee, enterMelee, getMelee, resolveMeleeRound, startMelee, type Melee } from "../combat/store.js";
+import { cancelMelee, createMelee, enterMelee, getMelee, publishMelee, resolveMeleeRound, startMelee, type Melee } from "../combat/store.js";
 import { grantChampionsRole } from "../events-manager/champions.js";
+import { createPrizePackage, finalizePrizePackage, finalizedPrizeText, isApprovedAdmirerRole, prizeAnnouncementText, type SecondPrizeMode } from "../events-manager/prizes.js";
 
 function canHost(interaction: { member: { permissions: { has(permission: bigint): boolean } }; user: { id: string } }, melee: Melee): boolean {
   return interaction.user.id === melee.hostId || interaction.member.permissions.has(PermissionFlagsBits.ManageGuild);
@@ -40,6 +41,15 @@ export const meleeCommand: Command = {
     .setDMPermission(false)
     .addSubcommand((sub) => sub.setName("create").setDescription("Open a grand melee in this channel.")
       .addStringOption((option) => option.setName("title").setDescription("Melee title.").setMaxLength(100).setRequired(true)))
+    .addSubcommand((sub) => idOption(sub.setName("publish").setDescription("Publish the grand melee and announce its prizes."))
+      .addStringOption((option) => option.setName("second-reward").setDescription("Override Grey Ghost's second-place reward method.").addChoices(
+        { name: "Auto", value: "auto" },
+        { name: "Second place chooses one", value: "player" },
+        { name: "Grey Ghost chooses one", value: "ghost" },
+        { name: "Grey Ghost chooses one + second place chooses one", value: "shared" },
+      ))
+      .addRoleOption((option) => option.setName("second-admirer").setDescription("Optional preset Admirer role for second place."))
+      .addRoleOption((option) => option.setName("third-admirer").setDescription("Optional preset Admirer role for third place.")))
     .addSubcommand((sub) => idOption(sub.setName("enter").setDescription("Enter an open grand melee."))
       .addRoleOption((option) => option.setName("house").setDescription("The House you represent.").setRequired(true)))
     .addSubcommand((sub) => idOption(sub.setName("start").setDescription("Close entries and begin the melee.")))
@@ -56,13 +66,45 @@ export const meleeCommand: Command = {
         return;
       }
       const melee = await createMelee(interaction.guildId, { title: interaction.options.getString("title", true), hostId: interaction.user.id, channelId: interaction.channelId });
-      await interaction.reply({ embeds: [new EmbedBuilder().setColor(0x7b2d26).setTitle(`Grand Melee #${melee.id} · ${melee.title}`).setDescription(`The field is open. Enter with \`/melee enter melee-id:${melee.id}\`.\n\n**No horses:** your trained character stats and equipped armour are used automatically.`).setFooter({ text: "Last fighter standing wins." })] });
+      await interaction.reply({ content: `Created draft grand melee **#${melee.id} · ${melee.title}**. Publish it with \`/melee publish melee-id:${melee.id}\`.`, flags: MessageFlags.Ephemeral });
       return;
     }
 
     const meleeId = interaction.options.getInteger("melee-id", true);
     const melee = await getMelee(interaction.guildId, meleeId);
     if (!melee) { await interaction.reply({ content: `Grand melee #${meleeId} was not found.`, flags: MessageFlags.Ephemeral }); return; }
+
+    if (sub === "publish") {
+      if (!canHost(interaction, melee)) { await interaction.reply({ content: "Only the host or a server manager may publish this melee.", flags: MessageFlags.Ephemeral }); return; }
+      const secondMode = (interaction.options.getString("second-reward") ?? "auto") as SecondPrizeMode | "auto";
+      const secondRole = interaction.options.getRole("second-admirer");
+      const thirdRole = interaction.options.getRole("third-admirer");
+      if (secondRole && secondMode === "player") {
+        await interaction.reply({ content: "If second place is choosing their own prize, leave `second-admirer` blank or use Grey Ghost/shared.", flags: MessageFlags.Ephemeral });
+        return;
+      }
+      if ((secondRole && !isApprovedAdmirerRole(secondRole)) || (thirdRole && !isApprovedAdmirerRole(thirdRole))) {
+        await interaction.reply({ content: "Preset prizes must be roles from Grey Ghost's approved Admirer-role pool.", flags: MessageFlags.Ephemeral });
+        return;
+      }
+      try {
+        const opened = await publishMelee(interaction.guildId, meleeId);
+        const pack = await createPrizePackage(interaction.guild, { kind: "melee", eventId: meleeId, title: opened.title, secondMode, secondRole, thirdRole });
+        const settings = await getGuildSettings(interaction.guildId);
+        const summons = settings.tourneySummonsRoleId ? `<@&${settings.tourneySummonsRoleId}>` : undefined;
+        const publishChannel = await interaction.guild.channels.fetch(opened.channelId).catch(() => null);
+        if (!publishChannel?.isSendable()) throw new Error("MELEE_CHANNEL_INVALID");
+        await publishChannel.send({
+          content: summons ? `${summons} — go to <#${opened.channelId}> and type \`/melee enter melee-id:${opened.id}\` to join.` : undefined,
+          allowedMentions: summons ? { roles: [settings.tourneySummonsRoleId!] } : undefined,
+          embeds: [new EmbedBuilder().setColor(0x7b2d26).setTitle(`Grand Melee #${opened.id} · ${opened.title}`).setDescription(`The field is open. Enter with \`/melee enter melee-id:${opened.id}\`.\n\n**No horses:** trained character stats and equipped armour are used automatically.`).addFields({ name: "Rewards", value: prizeAnnouncementText(pack) }).setFooter({ text: "Last fighter standing wins." })],
+        });
+        await interaction.reply({ content: `Grand melee #${meleeId} published.`, flags: MessageFlags.Ephemeral });
+      } catch {
+        await interaction.reply({ content: "That melee cannot be published.", flags: MessageFlags.Ephemeral });
+      }
+      return;
+    }
 
     if (sub === "enter") {
       const house = interaction.options.getRole("house", true);
@@ -122,8 +164,14 @@ export const meleeCommand: Command = {
         const houseRoleId = result.melee.entrants[championId]?.houseRoleId;
         if (houseRoleId) await changeHousePoints(interaction.guildId, { houseRoleId, delta: 5, reason: `Grand melee #${meleeId} champion`, memberId: championId, staffId: interaction.user.id });
         await awardAchievement(interaction.guildId, championId, "melee-champion");
-        await grantChampionsRole(interaction.guild, meleePodiumIds(result.melee));
-        embed.setColor(0xd4af37).addFields({ name: "Champion", value: `<@${championId}> wins **20 coins**, **5 bonus House Points**, and the **Grand Melee Champion** achievement.` });
+        const podiumIds = meleePodiumIds(result.melee);
+        await grantChampionsRole(interaction.guild, podiumIds);
+        const prizeResult = await finalizePrizePackage(interaction.guild, `melee:${meleeId}`, podiumIds);
+        await Promise.all(podiumIds.map((userId, index) => changeRenown(interaction.guildId, userId, [5, 3, 2][index] ?? 1).catch(() => undefined)));
+        embed.setColor(0xd4af37).addFields(
+          { name: "Champion", value: `<@${championId}> wins **20 coins**, **5 bonus House Points**, and the **Grand Melee Champion** achievement.` },
+          ...(prizeResult ? [{ name: "Prizes", value: finalizedPrizeText(prizeResult).slice(0, 1024) }] : []),
+        );
 
         const sourceKey = `melee:${meleeId}`;
         const already = (await getChronicleEntries(interaction.guildId)).some((entry) => entry.sourceKey === sourceKey);

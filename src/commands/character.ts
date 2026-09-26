@@ -1,6 +1,6 @@
 import { EmbedBuilder, MessageFlags, SlashCommandBuilder } from "discord.js";
 import type { Command } from "../types/command.js";
-import { createCharacter, getEconomyPlayer, renameCharacter } from "../economy/store.js";
+import { createCharacter, getEconomyPlayer, renameCharacter, renownTitle } from "../economy/store.js";
 import { shopItemMap } from "../economy/catalogue.js";
 import { getDragons, getRiderDragon } from "../dragons/store.js";
 
@@ -14,6 +14,8 @@ function card(name: string, userMention: string, player: NonNullable<Awaited<Ret
     .addFields(
       { name: "Training", value: `Health **${player.character.health}** · Damage **${player.character.damage}** · Resistance **${player.character.resistance}**` },
       { name: "Coin", value: `**${player.coins}**`, inline: true },
+      { name: "Renown", value: `**${player.character.renown}** · ${renownTitle(player.character.renown)}`, inline: true },
+      { name: "Heirlooms", value: String(player.character.heirlooms.length), inline: true },
       { name: "Mount", value: mount, inline: true },
       { name: "Armour", value: armour, inline: true },
       ...(dragonText ? [{ name: "Dragon", value: dragonText, inline: true }] : []),
