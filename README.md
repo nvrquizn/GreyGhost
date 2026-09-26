@@ -470,3 +470,12 @@ When the festival ends, Grey Ghost records the final standings, grants the confi
 ## v0.29.1 — Welcome GIFs
 
 Grey Ghost can now include a configured Discord attachment/CDN or Tenor GIF URL beneath every public welcome message. Configure it with `/setup welcome-gif url:<link>` and remove it with `/setup welcome-gif-clear`. `/testwelcome` previews the GIF too, and `/setup view` reports whether a welcome GIF is configured without exposing the stored URL.
+
+
+## v0.29.2 — Realm Cooldowns
+
+- Adds `/cooldowns` and `?cooldowns`.
+- Shows rolling cooldowns for daily coin, character training, hunts, and each tavern game.
+- Shows per-horse stable training availability.
+- Shows bonded-dragon feeding and daily activity availability.
+- Available actions display **Ready**; active cooldowns display Discord relative timestamps.

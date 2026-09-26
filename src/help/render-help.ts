@@ -26,6 +26,7 @@ export function renderHelp(member: GuildMember | null, isModmailStaff = false): 
           line("ping", "Check whether Grey Ghost is awake."),
           line("about", "Learn about Grey Ghost."),
           line("remindme", "Set, list, or cancel personal reminders."),
+          line("cooldowns", "View every personal cooldown and what is ready now."),
           line("userinfo", "View information about a server member."),
           line("serverinfo", "View information about this server."),
           line("rolemembers", "List members who have a selected role."),
@@ -141,5 +142,5 @@ export function renderHelp(member: GuildMember | null, isModmailStaff = false): 
   }
 
   return embed
-    .setFooter({ text: "Version 0.29.1 · Slash and ? prefix commands" });
+    .setFooter({ text: "Version 0.29.2 · Slash and ? prefix commands" });
 }
