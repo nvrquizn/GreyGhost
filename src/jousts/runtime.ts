@@ -12,6 +12,7 @@ import {
   type JoustMatch,
 } from "../services/guild-settings.js";
 import { refreshStatsDashboard } from "../stats/dashboard.js";
+import { applyJoustInjury } from "../economy/store.js";
 import { publishChronicleEntry } from "../chronicles/runtime.js";
 
 function entrantLine(joust: Joust, userId: string): string {
@@ -102,12 +103,17 @@ export async function runJoustRound(guild: Guild, joustId: number, staffId: stri
     const byes = result.byes.length
       ? result.byes.map((userId) => `<@${userId}> advances without a tilt.`).join("\n")
       : "No byes this round.";
+    const injuries = (await Promise.all(result.matches.map(async (match) => {
+      const injury = await applyJoustInjury(guild.id, match.loserId, `Joust #${result.joust.id} round ${match.round}`);
+      return injury?.injury ? `<@${match.loserId}> is **${injury.injury.severity}**.` : undefined;
+    }))).filter((line): line is string => Boolean(line));
     await channel.send({ embeds: [new EmbedBuilder()
       .setColor(0xb87333)
       .setTitle(`${result.joust.title} · Round ${result.joust.round}`)
       .setDescription(result.matches.map(matchLine).join("\n").slice(0, 4096))
       .addFields(
         { name: "Byes", value: byes.slice(0, 1024) },
+        { name: "Injuries", value: injuries.join("\n").slice(0, 1024) || "No lasting injuries this round." },
         { name: "House Points Awarded", value: String(result.pointsAwarded), inline: true },
         { name: "Top Three Riders", value: joustPodium(result.joust) },
       )

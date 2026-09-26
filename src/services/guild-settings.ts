@@ -8,6 +8,7 @@ import {
   simulateTilt,
   validJoustBuild,
 } from "../jousts/engine.js";
+import { getJoustBonuses } from "../economy/store.js";
 
 const collectionSetSchema = z
   .object({
@@ -1847,7 +1848,13 @@ export async function resolveJoustRound(
     for (const pair of draw.pairs) {
       const left = entrants[pair.leftId]!;
       const right = entrants[pair.rightId]!;
-      const tilt = simulateTilt(left, right, random);
+      const leftBonus = await getJoustBonuses(guildId, left.userId);
+      const rightBonus = await getJoustBonuses(guildId, right.userId);
+      const tilt = simulateTilt(
+        { ...left, health: left.health + leftBonus.health - leftBonus.injuryPenalty, damage: left.damage + leftBonus.damage, resistance: left.resistance + leftBonus.resistance },
+        { ...right, health: right.health + rightBonus.health - rightBonus.injuryPenalty, damage: right.damage + rightBonus.damage, resistance: right.resistance + rightBonus.resistance },
+        random,
+      );
       entrants[tilt.loserId]!.active = false;
       entrants[tilt.winnerId]!.wins += 1;
       const winner = entrants[tilt.winnerId]!;

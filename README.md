@@ -394,3 +394,9 @@ src/
   deploy-commands.ts Registers commands with Discord
   index.ts           Starts the bot and handles interactions
 ```
+
+## v0.21.0 progression notes
+
+Staff can use `/grant coins` and `/grant item` to award members without spending from their own balance. Members still use `/buy` when they are purchasing items with their own coins.
+
+Joust losers now have a chance to receive a temporary injury. Field Bandages can be bought or granted, then consumed with `/recovery bandage`.

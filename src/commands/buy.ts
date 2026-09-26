@@ -6,7 +6,7 @@ import { buyItem } from "../economy/store.js";
 export const buyCommand: Command = {
   data: new SlashCommandBuilder()
     .setName("buy")
-    .setDescription("Purchase a mount or piece of armour.")
+    .setDescription("Purchase a mount, piece of armour, or supply.")
     .setDMPermission(false)
     .addStringOption((option) => option.setName("item").setDescription("Item to purchase.").setRequired(true)
       .addChoices(...shopItems.map((item) => ({ name: `${item.name} — ${item.price} coin${item.price === 1 ? "" : "s"}`, value: item.id })))),
