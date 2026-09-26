@@ -11,6 +11,7 @@ import {
   type Message,
   type PartialMessage,
   type PermissionOverwrites,
+  type Role,
   type ThreadChannel,
   type User,
 } from "discord.js";
@@ -45,7 +46,7 @@ function channelTypeName(type: ChannelType): string {
 
 async function serverLogChannel(guild: Guild) {
   const settings = await getGuildSettings(guild.id);
-  const channelId = settings.serverLogChannelId ?? settings.reactionLogChannelId;
+  const channelId = settings.serverLogChannelId;
   if (!channelId) return null;
   const channel = await guild.channels.fetch(channelId).catch(() => null);
   return channel?.type === ChannelType.GuildText ? channel : null;
@@ -309,6 +310,57 @@ async function logThreadLifecycle(thread: ThreadChannel, action: "created" | "de
   await sendLog(thread.guild, embed);
 }
 
+function rolePermissionChanges(oldRole: Role, newRole: Role): string[] {
+  const changes: string[] = [];
+  for (const [permissionName, permission] of Object.entries(PermissionFlagsBits) as Array<[string, bigint]>) {
+    const before = oldRole.permissions.has(permission);
+    const after = newRole.permissions.has(permission);
+    if (before !== after) changes.push(`**${readableName(permissionName)}:** ${before ? "Enabled" : "Disabled"} → ${after ? "Enabled" : "Disabled"}`);
+  }
+  return changes;
+}
+
+async function logRoleLifecycle(role: Role, action: "created" | "deleted"): Promise<void> {
+  const actor = await recentAuditActor(role.guild, role.id, [
+    action === "created" ? AuditLogEvent.RoleCreate : AuditLogEvent.RoleDelete,
+  ]);
+  const embed = new EmbedBuilder()
+    .setColor(action === "created" ? 0x82a67d : 0x8f4b4b)
+    .setTitle(`Role ${action}`)
+    .setDescription(`**${role.name}** was ${action}.`)
+    .addFields(
+      { name: "Role ID", value: `\`${role.id}\``, inline: true },
+      { name: "Colour", value: role.hexColor, inline: true },
+      { name: "Members", value: role.members.size.toString(), inline: true },
+      actorField(actor),
+    )
+    .setTimestamp();
+  await sendLog(role.guild, embed);
+}
+
+async function logRoleUpdate(oldRole: Role, newRole: Role): Promise<void> {
+  const changes: string[] = [];
+  if (oldRole.name !== newRole.name) changes.push(`**Name:** \`${oldRole.name}\` → \`${newRole.name}\``);
+  if (oldRole.color !== newRole.color) changes.push(`**Colour:** ${oldRole.hexColor} → ${newRole.hexColor}`);
+  if (oldRole.position !== newRole.position) changes.push(`**Position:** ${oldRole.position} → ${newRole.position}`);
+  if (oldRole.hoist !== newRole.hoist) changes.push(`**Displayed separately:** ${oldRole.hoist ? "Yes" : "No"} → ${newRole.hoist ? "Yes" : "No"}`);
+  if (oldRole.mentionable !== newRole.mentionable) changes.push(`**Mentionable:** ${oldRole.mentionable ? "Yes" : "No"} → ${newRole.mentionable ? "Yes" : "No"}`);
+  changes.push(...rolePermissionChanges(oldRole, newRole));
+  if (!changes.length) return;
+
+  const actor = await recentAuditActor(newRole.guild, newRole.id, [AuditLogEvent.RoleUpdate]);
+  const embed = new EmbedBuilder()
+    .setColor(0xd4af37)
+    .setTitle(oldRole.name !== newRole.name ? "Role renamed" : "Role updated")
+    .setDescription(shorten(changes.join("\n"), 4_000))
+    .addFields(
+      { name: "Role", value: `${newRole}\n\`${newRole.id}\``, inline: true },
+      actorField(actor),
+    )
+    .setTimestamp();
+  await sendLog(newRole.guild, embed);
+}
+
 export function registerServerLogEvents(client: Client): void {
   client.on(Events.MessageDelete, (message) => {
     void logDeletedMessage(message).catch((error) => console.error("Could not log a deleted message:", error));
@@ -369,5 +421,17 @@ export function registerServerLogEvents(client: Client): void {
       await sendLog(newThread.guild, embed);
     };
     void record().catch((error) => console.error("Could not log a thread update:", error));
+  });
+
+  client.on(Events.GuildRoleCreate, (role) => {
+    void logRoleLifecycle(role, "created").catch((error) => console.error("Could not log a created role:", error));
+  });
+
+  client.on(Events.GuildRoleDelete, (role) => {
+    void logRoleLifecycle(role, "deleted").catch((error) => console.error("Could not log a deleted role:", error));
+  });
+
+  client.on(Events.GuildRoleUpdate, (oldRole, newRole) => {
+    void logRoleUpdate(oldRole, newRole).catch((error) => console.error("Could not log a role update:", error));
   });
 }

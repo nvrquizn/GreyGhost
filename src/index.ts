@@ -22,6 +22,7 @@ import { registerQuizInteractions } from "./quizzes/runtime.js";
 import { registerPrefixCommands } from "./prefix/handler.js";
 import { registerReactionEvents } from "./events/reaction-events.js";
 import { registerServerLogEvents } from "./events/server-log-events.js";
+import { registerInviteTracking } from "./events/invite-tracking.js";
 
 const client = new Client({
   intents: [
@@ -49,6 +50,7 @@ registerQuizInteractions(client);
 registerPrefixCommands(client);
 registerReactionEvents(client);
 registerServerLogEvents(client);
+registerInviteTracking(client);
 
 client.once(Events.ClientReady, (readyClient) => {
   readyClient.user.setActivity("the mists of Dragonstone", {

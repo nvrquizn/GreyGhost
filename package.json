@@ -1,6 +1,6 @@
 {
   "name": "grey-ghost",
-  "version": "0.16.0",
+  "version": "0.16.1",
   "private": true,
   "description": "Grey Ghost — the all-purpose bot for an ASOIAF Discord community.",
   "type": "module",

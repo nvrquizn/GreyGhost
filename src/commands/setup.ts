@@ -28,7 +28,8 @@ function settingsSummary(settings: GuildSettings): string {
     `**Newcomer role:** ${settings.newcomerRoleId ? `<@&${settings.newcomerRoleId}>` : "Not configured"}`,
     `**Suggestions channel:** ${settings.suggestionChannelId ? `<#${settings.suggestionChannelId}>` : "Not configured"}`,
     `**Collection announcements:** ${settings.collectionAnnouncementChannelId ? `<#${settings.collectionAnnouncementChannelId}>` : "Not configured"}`,
-    `**Server logs:** ${settings.serverLogChannelId ?? settings.reactionLogChannelId ? `<#${settings.serverLogChannelId ?? settings.reactionLogChannelId}>` : "Not configured"}`,
+    `**Server logs:** ${settings.serverLogChannelId ? `<#${settings.serverLogChannelId}>` : "Not configured"}`,
+    `**Reaction logs:** ${settings.reactionLogChannelId ? `<#${settings.reactionLogChannelId}>` : "Not configured"}`,
     `**Modmail:** ${settings.modmail ? `tickets in <#${settings.modmail.categoryId}> · staff <@&${settings.modmail.staffRoleId}> · logs <#${settings.modmail.logChannelId}>` : "Not configured"}`,
     `**Moderation logs:** ${settings.moderation ? `<#${settings.moderation.logChannelId}>` : "Not configured"}`,
   ].join("\n");
@@ -114,11 +115,23 @@ export const setupCommand: Command = {
     .addSubcommand((subcommand) =>
       subcommand
         .setName("server-logs")
-        .setDescription("Choose one channel for server activity and reaction logs.")
+        .setDescription("Choose where server audit activity is recorded.")
         .addChannelOption((option) =>
           option
             .setName("channel")
             .setDescription("The private channel for Grey Ghost's server audit logs.")
+            .addChannelTypes(ChannelType.GuildText)
+            .setRequired(true),
+        ),
+    )
+    .addSubcommand((subcommand) =>
+      subcommand
+        .setName("reaction-logs")
+        .setDescription("Choose a separate channel for added and removed reactions.")
+        .addChannelOption((option) =>
+          option
+            .setName("channel")
+            .setDescription("The private channel for reaction activity.")
             .addChannelTypes(ChannelType.GuildText)
             .setRequired(true),
         ),
@@ -150,6 +163,7 @@ export const setupCommand: Command = {
               { name: "Modmail", value: "modmail" },
               { name: "Moderation records", value: "moderation" },
               { name: "Server logs", value: "serverLogChannelId" },
+              { name: "Reaction logs", value: "reactionLogChannelId" },
               { name: "All basic server settings", value: "all" },
             ),
         ),
@@ -210,10 +224,7 @@ export const setupCommand: Command = {
       const target = interaction.options.getString("setting", true) as
         | keyof GuildSettings
         | "all";
-      let settings = await clearGuildSetting(interaction.guildId, target);
-      if (target === "serverLogChannelId" && settings.reactionLogChannelId) {
-        settings = await clearGuildSetting(interaction.guildId, "reactionLogChannelId");
-      }
+      const settings = await clearGuildSetting(interaction.guildId, target);
 
       await interaction.reply({
         content: `The selected setting has been cleared.\n\n${settingsSummary(settings)}`,
@@ -296,10 +307,21 @@ export const setupCommand: Command = {
       const channel = interaction.options.getChannel("channel", true);
       const settings = await updateGuildSettings(interaction.guildId, {
         serverLogChannelId: channel.id,
+      });
+      await interaction.reply({
+        content: `Server activity—including member, invite, message, channel, permission, thread, role, and ghost-ping events—will now be recorded in ${channel}.\n\n${settingsSummary(settings)}`,
+        flags: MessageFlags.Ephemeral,
+      });
+      return;
+    }
+
+    if (subcommand === "reaction-logs") {
+      const channel = interaction.options.getChannel("channel", true);
+      const settings = await updateGuildSettings(interaction.guildId, {
         reactionLogChannelId: channel.id,
       });
       await interaction.reply({
-        content: `Server activity—including message, channel, permission, thread, ghost-ping, and reaction events—will now be recorded in ${channel}.\n\n${settingsSummary(settings)}`,
+        content: `Added and removed reactions will now be recorded separately in ${channel}.\n\n${settingsSummary(settings)}`,
         flags: MessageFlags.Ephemeral,
       });
       return;

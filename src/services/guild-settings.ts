@@ -29,6 +29,13 @@ const memberProfileSchema = z.object({
   updatedAt: z.number(),
 });
 
+const memberInviteRecordSchema = z.object({
+  source: z.enum(["invite", "vanity", "unknown"]),
+  code: z.string().max(100).optional(),
+  inviterId: z.string().optional(),
+  joinedAt: z.number().int().positive(),
+});
+
 const housePointTransactionSchema = z.object({
   id: z.string(),
   houseRoleId: z.string(),
@@ -261,6 +268,7 @@ export const guildSettingsSchema = z.object({
     )
     .optional(),
   memberProfiles: z.record(z.string(), memberProfileSchema).optional(),
+  memberInviteRecords: z.record(z.string(), memberInviteRecordSchema).optional(),
   housePoints: housePointsSchema.optional(),
   loreEntries: z.record(z.string(), loreEntrySchema).optional(),
   hiddenLoreEntryIds: z.array(z.string()).max(500).optional(),
@@ -276,6 +284,7 @@ export type GuildSettings = z.infer<typeof guildSettingsSchema>;
 export type SelfRolePanel = NonNullable<GuildSettings["selfRolePanels"]>[string];
 export type CollectionSet = NonNullable<GuildSettings["collectionSets"]>[string];
 export type MemberProfile = NonNullable<GuildSettings["memberProfiles"]>[string];
+export type MemberInviteRecord = NonNullable<GuildSettings["memberInviteRecords"]>[string];
 export type HousePoints = NonNullable<GuildSettings["housePoints"]>;
 export type HousePointTransaction = HousePoints["transactions"][number];
 export type LoreEntry = z.infer<typeof loreEntrySchema>;
@@ -401,6 +410,38 @@ export async function clearSelfRolePanel(guildId: string, panelId: string): Prom
     delete guildSettings.selfRolePanels[panelId];
   }
 
+  writeQueue = writeQueue.then(saveSettings);
+  await writeQueue;
+}
+
+export async function saveMemberInviteRecord(
+  guildId: string,
+  memberId: string,
+  record: MemberInviteRecord,
+): Promise<void> {
+  const settings = await loadSettings();
+  const guildSettings = settings[guildId] ?? {};
+  guildSettings.memberInviteRecords = {
+    ...guildSettings.memberInviteRecords,
+    [memberId]: memberInviteRecordSchema.parse(record),
+  };
+  settings[guildId] = guildSettings;
+  writeQueue = writeQueue.then(saveSettings);
+  await writeQueue;
+}
+
+export async function getMemberInviteRecord(
+  guildId: string,
+  memberId: string,
+): Promise<MemberInviteRecord | undefined> {
+  const settings = await getGuildSettings(guildId);
+  return settings.memberInviteRecords?.[memberId];
+}
+
+export async function deleteMemberInviteRecord(guildId: string, memberId: string): Promise<void> {
+  const settings = await loadSettings();
+  const guildSettings = settings[guildId];
+  if (guildSettings?.memberInviteRecords) delete guildSettings.memberInviteRecords[memberId];
   writeQueue = writeQueue.then(saveSettings);
   await writeQueue;
 }

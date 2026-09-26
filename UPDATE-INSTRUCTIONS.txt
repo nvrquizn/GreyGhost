@@ -1,0 +1,58 @@
+GREY GHOST v0.16.1 — SAFE REPLACEMENT PACKAGE
+
+This package contains the complete bot source code, so it can safely restore a
+src folder while installing the invite and role-log update.
+
+1. Extract this ZIP.
+2. Open the extracted Grey-Ghost-v0.16.1-safe-replacement folder.
+3. Select src, package.json, package-lock.json, tsconfig.json, and README.md.
+4. Drag them directly into the TOP LEVEL of your existing Grey Ghost bot folder.
+5. Choose Replace for the matching src folder and files.
+
+Choosing Replace for src is safe with THIS package because its src folder is
+complete. It contains all earlier files and the v0.16.1 additions.
+
+The paths must remain exactly as shown. For example:
+
+  src/commands/about.ts       -> YOUR BOT/src/commands/about.ts
+  src/commands/joust.ts       -> YOUR BOT/src/commands/joust.ts
+  src/jousts/engine.ts        -> YOUR BOT/src/jousts/engine.ts
+  src/prefix/handler.ts       -> YOUR BOT/src/prefix/handler.ts
+
+Keep your existing copies of these; they are not included in this package:
+
+  .env
+  data/
+  node_modules/
+
+After copying the replacement, run these from the existing bot folder:
+
+  npm install
+  npm run commands:deploy
+  npm run check
+
+Then commit and push the changed files to the repository connected to Railway.
+Railway should deploy the new commit automatically. If it does not, redeploy the
+latest commit from Railway.
+
+Message Content Intent must remain enabled in the Discord Developer Portal for
+modmail and ? prefix commands.
+
+The new test-welcome commands are:
+
+  /testwelcome
+  ?testwelcome
+
+They post the configured welcome message without assigning a role or creating a
+fake join-log entry.
+
+Configure the unified server log after deployment with:
+
+  /setup server-logs
+
+Choose a private text channel. Grey Ghost will record message edits/deletions,
+ghost pings, invite/member activity, roles, and channel/category/thread changes there.
+
+Configure the separate reaction log with:
+
+  /setup reaction-logs

@@ -31,7 +31,7 @@ async function logReaction(
   if (!message?.guild || !message.author) return;
 
   const settings = await getGuildSettings(message.guild.id);
-  const logChannelId = settings.serverLogChannelId ?? settings.reactionLogChannelId;
+  const logChannelId = settings.reactionLogChannelId;
   if (!logChannelId) return;
 
   const channel = await message.guild.channels

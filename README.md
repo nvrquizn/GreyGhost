@@ -21,7 +21,8 @@ current build supports both slash commands and role-aware `?` prefix commands.
 - `/setup modmail` — configures the private ticket category, staff role, and transcript log
 - `/setup moderation` — chooses the private moderation case-log channel
 - `/setup server-logs` — chooses one private channel for message, channel,
-  permission, thread, ghost-ping, and reaction activity
+  permission, thread, role, member, invite, and ghost-ping activity
+- `/setup reaction-logs` — chooses a separate private channel for reaction activity
 - `/backup create` and `/backup restore` — export or restore server-specific bot data
 - `/selfroles configure` — selects up to 25 roles for a self-role panel
 - `/selfroles emoji` — assigns an emoji to a configured role button
@@ -182,12 +183,20 @@ configuration and moderation commands from members who cannot use them.
 
 ## Server audit logs
 
-Configure one private destination with `/setup server-logs`. Grey Ghost records
-message edits and deletions, bulk deletions, reactions, channel/category/thread
+Configure the main destination with `/setup server-logs` and keep high-volume
+reaction activity separate with `/setup reaction-logs`. Grey Ghost records
+message edits and deletions, bulk deletions, channel/category/thread
 creation and deletion, renames, category moves, topics, slowmode, voice limits,
-thread archive/lock state, and permission-overwrite changes. Permission entries
+thread archive/lock state, role creation/deletion/renaming, and permission changes. Permission entries
 name every affected Discord permission and show whether it became allowed,
 denied, or reset.
+
+Invite usage is cached while Grey Ghost is online. Join logs show the member,
+account creation and join times, member count, invite code, inviter, and avatar.
+The attribution is saved so leave logs can repeat the original invite and
+inviter alongside time spent in the server and roles held at departure. Discord
+occasionally removes or withholds an invite before it can be matched; those
+rare joins are marked as unknown instead of being guessed.
 
 If a message directly mentioning a member is deleted within 30 seconds, the log
 marks it as a ghost ping and Grey Ghost privately notifies each directly
