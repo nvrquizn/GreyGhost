@@ -35,6 +35,7 @@ const choiceLabels: Record<ExpeditionChoice, string> = {
   cautious: "🛡️ Advance with caution",
   clever: "🧭 Seek a clever path",
 };
+import { recordFestivalActivity } from "../festivals/store.js";
 
 const cosmeticRewards = [
   "expedition-silver-saddlecloth",
@@ -138,6 +139,7 @@ async function finishExpedition(interaction: import("discord.js").ChatInputComma
     await grantCoins(interaction.guildId, userId, reward, "Grey Ghost", `Expedition #${expedition.id} reward`);
     await awardAchievement(interaction.guildId, userId, "expedition-veteran", "Grey Ghost");
     if (expedition.successes >= 2) await changeRenown(interaction.guildId, userId, 2).catch(() => undefined);
+    await recordFestivalActivity(interaction.guildId, userId, "expedition").catch(() => undefined);
   }
   rewardLines.push(`Every explorer receives **${reward} coins**.`);
 

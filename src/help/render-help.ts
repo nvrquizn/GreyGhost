@@ -58,6 +58,7 @@ export function renderHelp(member: GuildMember | null, isModmailStaff = false): 
           line("race", "Enter or inspect a horse race."),
           line("hunt", "Go hunting for coin, Renown, and horse experience."),
           line("tavern", "Play no-wager tavern mini-games for small fixed prizes."),
+          line("festival", "Join seasonal festivals, complete objectives, and spend festival tokens."),
         ].join("\n"),
       },
       {
@@ -84,6 +85,7 @@ export function renderHelp(member: GuildMember | null, isModmailStaff = false): 
       line("joust", "Create, publish, and run jousting tournaments."),
       line("melee", "Create, publish, and run grand melees."),
       line("race", "Create, publish, and run horse races."),
+      line("festival", "Create, publish, and conclude seasonal festivals."),
     ].join("\n"),
   });
 
@@ -139,5 +141,5 @@ export function renderHelp(member: GuildMember | null, isModmailStaff = false): 
   }
 
   return embed
-    .setFooter({ text: "Version 0.27.0 · Slash and ? prefix commands" });
+    .setFooter({ text: "Version 0.28.0 · Slash and ? prefix commands" });
 }

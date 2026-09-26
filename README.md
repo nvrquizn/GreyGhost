@@ -457,3 +457,11 @@ Expeditions now keep a live text status in-channel showing the party and choice 
 Grey Ghost includes no-wager tavern mini-games through `/tavern`: dice, darts, the three cups, and persistent tavern statistics. Games award only small fixed coin prizes with per-game cooldowns and a daily reward cap; they do not award Renown.
 
 Deleted-message server logging was also hardened in this release with recent-message snapshots and partial-message fallbacks.
+
+## v0.28.0 — Seasonal Festivals
+
+Grey Ghost can now host temporary server-wide festivals with `/festival`. Staff create and publish a named festival, while members join from the configured event chat, earn Festival Points through normal Realm activities, complete temporary objectives, collect Festival Tokens, and spend those tokens on permanent seasonal keepsakes.
+
+Festival activity integrates with duels, hunts, tavern wins, expeditions, horse races, jousts, and grand melees. Race/joust/melee podiums contribute extra Festival Points while a festival is active. Bonded dragons may attend for history and atmosphere, but dragon attendance awards no competitive points.
+
+When the festival ends, Grey Ghost records the final standings, grants the configured Champions role to the top three, applies the existing Admirer prize system, grants permanent Renown, and keeps the result available in `/festival history`. Backup format v8 includes all festival state.

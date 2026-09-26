@@ -6,6 +6,7 @@ import { getGuildSettings } from "../services/guild-settings.js";
 import { cancelRace, createRace, enterRace, getHorseProfile, getRace, publishRace, resolveRace, type RaceType } from "../stables/store.js";
 import { createPrizePackage, finalizePrizePackage, finalizedPrizeText, isApprovedAdmirerRole, prizeAnnouncementText, type SecondPrizeMode } from "../events-manager/prizes.js";
 import { grantChampionsRole } from "../events-manager/champions.js";
+import { awardFestivalPlacement, recordFestivalActivity } from "../festivals/store.js";
 
 const mountChoices = shopItems.filter((item) => item.category === "mount").map((item) => ({ name: item.name, value: item.id }));
 const typeLabel: Record<RaceType, string> = { sprint: "Sprint", distance: "Distance", cross_country: "Cross-Country", grand: "Grand Race" };
@@ -89,6 +90,8 @@ export const raceCommand: Command = {
       await grantChampionsRole(interaction.guild, result.podiumIds);
       const prize = await finalizePrizePackage(interaction.guild, `race:${raceId}`, result.podiumIds);
       await Promise.all(result.podiumIds.map((userId, index) => changeRenown(interaction.guildId, userId, [5, 3, 2][index] ?? 1).catch(() => undefined)));
+      await Promise.all(Object.keys(result.race.entrants).map((userId) => recordFestivalActivity(interaction.guildId, userId, "race").catch(() => undefined)));
+      await Promise.all(result.podiumIds.map((userId, index) => awardFestivalPlacement(interaction.guildId, userId, [8, 5, 3][index] ?? 1, [5, 3, 2][index] ?? 1).catch(() => undefined)));
       const finishers = Object.values(result.race.entrants).filter((entry) => entry.place).sort((a, b) => a.place! - b.place!);
       const lines = await Promise.all(finishers.map(async (entry) => {
         const horse = await getHorseProfile(interaction.guildId, entry.userId, entry.mountId);

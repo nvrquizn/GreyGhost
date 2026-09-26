@@ -23,6 +23,7 @@ import { dragonGuildBackupSchema, exportGuildDragons, replaceGuildDragons } from
 import { tradeGuildBackupSchema, exportGuildTrades, replaceGuildTrades } from "../trades/store.js";
 import { stableGuildBackupSchema, exportGuildStables, replaceGuildStables } from "../stables/store.js";
 import { tavernGuildBackupSchema, exportGuildTavern, replaceGuildTavern } from "../tavern/store.js";
+import { festivalGuildBackupSchema, exportGuildFestivals, replaceGuildFestivals } from "../festivals/store.js";
 
 const backupV1Schema = z.object({
   format: z.literal("grey-ghost-server-backup"),
@@ -65,7 +66,12 @@ const backupV7Schema = backupV6Schema.omit({ version: true }).extend({
   tavern: tavernGuildBackupSchema,
 });
 
-const backupSchema = z.union([backupV7Schema, backupV6Schema, backupV5Schema, backupV4Schema, backupV3Schema, backupV2Schema, backupV1Schema]);
+const backupV8Schema = backupV7Schema.omit({ version: true }).extend({
+  version: z.literal(8),
+  festivals: festivalGuildBackupSchema,
+});
+
+const backupSchema = z.union([backupV8Schema, backupV7Schema, backupV6Schema, backupV5Schema, backupV4Schema, backupV3Schema, backupV2Schema, backupV1Schema]);
 
 export const backupCommand: Command = {
   data: new SlashCommandBuilder()
@@ -100,9 +106,9 @@ export const backupCommand: Command = {
 
     if (subcommand === "create") {
       await interaction.deferReply({ flags: MessageFlags.Ephemeral });
-      const backup = backupV7Schema.parse({
+      const backup = backupV8Schema.parse({
         format: "grey-ghost-server-backup",
-        version: 7,
+        version: 8,
         createdAt: new Date().toISOString(),
         guildId: interaction.guildId,
         guildName: interaction.guild.name,
@@ -115,6 +121,7 @@ export const backupCommand: Command = {
         trades: await exportGuildTrades(interaction.guildId),
         stables: await exportGuildStables(interaction.guildId),
         tavern: await exportGuildTavern(interaction.guildId),
+        festivals: await exportGuildFestivals(interaction.guildId),
       });
       const date = new Date().toISOString().slice(0, 10);
       const file = new AttachmentBuilder(Buffer.from(`${JSON.stringify(backup, null, 2)}\n`), {
@@ -177,15 +184,16 @@ export const backupCommand: Command = {
 
     await replaceGuildSettings(interaction.guildId, result.data.settings);
     await replaceGuildSuggestions(interaction.guildId, result.data.suggestions);
-    if (result.data.version === 2 || result.data.version === 3 || result.data.version === 4 || result.data.version === 5 || result.data.version === 6 || result.data.version === 7) await replaceGuildEconomy(interaction.guildId, result.data.economy);
-    if (result.data.version === 3 || result.data.version === 4 || result.data.version === 5 || result.data.version === 6 || result.data.version === 7) await replaceGuildCombat(interaction.guildId, result.data.combat);
-    if (result.data.version === 4 || result.data.version === 5 || result.data.version === 6 || result.data.version === 7) await replaceGuildExpeditions(interaction.guildId, result.data.expeditions);
-    if (result.data.version === 5 || result.data.version === 6 || result.data.version === 7) {
+    if (result.data.version === 2 || result.data.version === 3 || result.data.version === 4 || result.data.version === 5 || result.data.version === 6 || result.data.version === 7 || result.data.version === 8) await replaceGuildEconomy(interaction.guildId, result.data.economy);
+    if (result.data.version === 3 || result.data.version === 4 || result.data.version === 5 || result.data.version === 6 || result.data.version === 7 || result.data.version === 8) await replaceGuildCombat(interaction.guildId, result.data.combat);
+    if (result.data.version === 4 || result.data.version === 5 || result.data.version === 6 || result.data.version === 7 || result.data.version === 8) await replaceGuildExpeditions(interaction.guildId, result.data.expeditions);
+    if (result.data.version === 5 || result.data.version === 6 || result.data.version === 7 || result.data.version === 8) {
       await replaceGuildDragons(interaction.guildId, result.data.dragons);
       await replaceGuildTrades(interaction.guildId, result.data.trades);
     }
-    if (result.data.version === 6 || result.data.version === 7) await replaceGuildStables(interaction.guildId, result.data.stables);
-    if (result.data.version === 7) await replaceGuildTavern(interaction.guildId, result.data.tavern);
+    if (result.data.version === 6 || result.data.version === 7 || result.data.version === 8) await replaceGuildStables(interaction.guildId, result.data.stables);
+    if (result.data.version === 7 || result.data.version === 8) await replaceGuildTavern(interaction.guildId, result.data.tavern);
+    if (result.data.version === 8) await replaceGuildFestivals(interaction.guildId, result.data.festivals);
     await interaction.editReply(
       `Backup from <t:${Math.floor(new Date(result.data.createdAt).getTime() / 1000)}:F> restored. Run \`/setup check\` to validate its channels, roles, and permissions.`,
     );

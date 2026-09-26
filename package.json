@@ -1,8 +1,8 @@
 {
   "name": "grey-ghost",
-  "version": "0.27.0",
+  "version": "0.28.0",
   "private": true,
-  "description": "Grey Ghost \u2014 the all-purpose bot for an ASOIAF Discord community.",
+  "description": "Grey Ghost — the all-purpose bot for an ASOIAF Discord community.",
   "type": "module",
   "scripts": {
     "dev": "tsx watch src/index.ts",

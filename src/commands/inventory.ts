@@ -8,6 +8,13 @@ const cosmeticNames: Record<string, string> = {
   "expedition-crimson-saddlecloth": "Crimson Expedition Saddlecloth",
   "expedition-weathered-cloak": "Weathered Pathfinder Cloak",
   "expedition-gilded-clasp": "Gilded Pathfinder Clasp",
+  "festival:autumn-saddlecloth": "Autumn Saddlecloth",
+  "festival:gilded-antler-brooch": "Gilded Antler Brooch",
+  "festival:red-gold-riding-cloak": "Red-Gold Riding Cloak",
+  "festival:harvest-tourney-favor": "Harvest Tourney Favor",
+  "festival:engraved-harvest-goblet": "Engraved Harvest Goblet",
+  "festival:gilded-bridle-rosette": "Gilded Bridle Rosette",
+  "festival:bronze-leaf-pommel": "Bronze Leaf Sword-Pommel",
 };
 
 export const inventoryCommand: Command = {

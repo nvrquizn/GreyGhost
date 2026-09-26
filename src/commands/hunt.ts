@@ -2,6 +2,7 @@ import { EmbedBuilder, MessageFlags, SlashCommandBuilder } from "discord.js";
 import type { Command } from "../types/command.js";
 import { changeRenown, getEconomyPlayer, grantCoins } from "../economy/store.js";
 import { getHorseProfile, getHuntStats, recordHunt } from "../stables/store.js";
+import { recordFestivalActivity } from "../festivals/store.js";
 
 const quarry = {
   hare: { label: "Hare", difficulty: 0.35, reward: [1, 2] as const },
@@ -40,6 +41,7 @@ export const huntCommand: Command = {
       if ((error as Error).message === "HUNT_COOLDOWN" && readyAt) { await interaction.reply({ content: `You have already hunted recently. You may hunt again <t:${Math.floor(readyAt / 1000)}:R>.`, flags: MessageFlags.Ephemeral }); return; }
       throw error;
     }
+    await recordFestivalActivity(interaction.guildId, interaction.user.id, "hunt").catch(() => undefined);
     if (!success) {
       await interaction.reply(`🏹 **The ${target.label.toLowerCase()} hunt came up empty.** ${mounted ? `${mounted.name} still gained a little field experience.` : "The trail went cold before dusk."}`);
       return;

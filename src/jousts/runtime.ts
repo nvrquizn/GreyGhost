@@ -17,6 +17,7 @@ import { publishChronicleEntry } from "../chronicles/runtime.js";
 import { createJoustSpoilClaim } from "../combat/store.js";
 import { grantChampionsRole } from "../events-manager/champions.js";
 import { finalizePrizePackage, finalizedPrizeText, prizeAnnouncementText, type EventPrizePackage } from "../events-manager/prizes.js";
+import { awardFestivalPlacement, recordFestivalActivity } from "../festivals/store.js";
 
 function entrantLine(joust: Joust, userId: string): string {
   const entrant = joust.entrants[userId];
@@ -147,6 +148,8 @@ export async function runJoustRound(guild: Guild, joustId: number, staffId: stri
     await grantChampionsRole(guild, podiumIds);
     const prizeResult = await finalizePrizePackage(guild, `joust:${result.joust.id}`, podiumIds);
     await Promise.all(podiumIds.map((userId, index) => changeRenown(guild.id, userId, [5, 3, 2][index] ?? 1).catch(() => undefined)));
+    await Promise.all(Object.keys(result.joust.entrants).map((userId) => recordFestivalActivity(guild.id, userId, "joust").catch(() => undefined)));
+    await Promise.all(podiumIds.map((userId, index) => awardFestivalPlacement(guild.id, userId, [8, 5, 3][index] ?? 1, [5, 3, 2][index] ?? 1).catch(() => undefined)));
     const champions = result.joust.championIds.map((userId) => entrantLine(result.joust, userId)).join("\n");
     await channel.send({ embeds: [new EmbedBuilder()
       .setColor(0xd4af37)

@@ -1,6 +1,7 @@
 import { EmbedBuilder, MessageFlags, SlashCommandBuilder } from "discord.js";
 import type { Command } from "../types/command.js";
 import { awardCoins } from "../economy/store.js";
+import { recordFestivalActivity } from "../festivals/store.js";
 import {
   getTavernPlayer,
   recordTavernGame,
@@ -22,6 +23,7 @@ async function award(interaction: Parameters<Command["execute"]>[0], game: Taver
   try {
     const result = await recordTavernGame(interaction.guildId!, interaction.user.id, game, won, score, reward);
     if (result.reward > 0) await awardCoins(interaction.guildId!, interaction.user.id, result.reward, `Tavern · ${game}`);
+    if (won) await recordFestivalActivity(interaction.guildId!, interaction.user.id, "tavern").catch(() => undefined);
     return result;
   } catch (error) {
     const text = cooldownText(error);

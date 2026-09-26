@@ -5,6 +5,7 @@ import { addChronicleEntry, awardAchievement, changeHousePoints, getChronicleEnt
 import { publishChronicleEntry } from "../chronicles/runtime.js";
 import { cancelMelee, createMelee, enterMelee, getMelee, publishMelee, resolveMeleeRound, startMelee, type Melee } from "../combat/store.js";
 import { grantChampionsRole } from "../events-manager/champions.js";
+import { awardFestivalPlacement, recordFestivalActivity } from "../festivals/store.js";
 import { createPrizePackage, finalizePrizePackage, finalizedPrizeText, isApprovedAdmirerRole, prizeAnnouncementText, type SecondPrizeMode } from "../events-manager/prizes.js";
 
 function canHost(interaction: { member: { permissions: { has(permission: bigint): boolean } }; user: { id: string } }, melee: Melee): boolean {
@@ -173,6 +174,8 @@ export const meleeCommand: Command = {
         await grantChampionsRole(interaction.guild, podiumIds);
         const prizeResult = await finalizePrizePackage(interaction.guild, `melee:${meleeId}`, podiumIds);
         await Promise.all(podiumIds.map((userId, index) => changeRenown(interaction.guildId, userId, [5, 3, 2][index] ?? 1).catch(() => undefined)));
+        await Promise.all(Object.keys(result.melee.entrants).map((userId) => recordFestivalActivity(interaction.guildId, userId, "melee").catch(() => undefined)));
+        await Promise.all(podiumIds.map((userId, index) => awardFestivalPlacement(interaction.guildId, userId, [8, 5, 3][index] ?? 1, [5, 3, 2][index] ?? 1).catch(() => undefined)));
         embed.setColor(0xd4af37).addFields(
           { name: "Champion", value: `<@${championId}> wins **20 coins**, **5 bonus House Points**, and the **Grand Melee Champion** achievement.` },
           ...(prizeResult ? [{ name: "Prizes", value: finalizedPrizeText(prizeResult).slice(0, 1024) }] : []),

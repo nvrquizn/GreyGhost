@@ -2,6 +2,7 @@ import { EmbedBuilder, MessageFlags, SlashCommandBuilder } from "discord.js";
 import type { Command } from "../types/command.js";
 import { acceptDuel, cancelDuel, challengeDuel, declineDuel, getDuel, listMemberDuels } from "../combat/store.js";
 import { getDuelAllowance } from "../economy/store.js";
+import { recordFestivalActivity } from "../festivals/store.js";
 
 function duelError(error: unknown): string {
   const code = (error as Error).message;
@@ -66,6 +67,7 @@ export const duelCommand: Command = {
       if (sub === "accept") {
         const result = await acceptDuel(interaction.guildId, duelId, interaction.user.id);
         const duel = result.duel;
+        await Promise.all([duel.winnerId, duel.loserId].filter(Boolean).map((id) => recordFestivalActivity(interaction.guildId, id!, "duel").catch(() => undefined)));
         await interaction.reply({ embeds: [new EmbedBuilder()
           .setColor(0xb87333)
           .setTitle(`Duel #${duel.id} · The Bout Is Decided`)

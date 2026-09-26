@@ -1,4 +1,4 @@
-GREY GHOST v0.25.0 — SAFE REPLACEMENT
+GREY GHOST v0.28.0 — SAFE REPLACEMENT
 
 1. Keep your existing live/local files and folders:
    - .env
@@ -14,13 +14,15 @@ GREY GHOST v0.25.0 — SAFE REPLACEMENT
    npm run commands:deploy
    npm run check
 
-4. Configure the event roles once in Discord if you have not already:
+4. Make sure the event system is configured:
    /setup champions-role role:@Champions
    /setup tourney-summons role:@Tourney Summons
+   /setup event-channel channel:#your-event-announcement-channel
+   /setup event-chat channel:#your-event-chat
 
 5. If npm run check succeeds, commit and push:
    git add .
-   git commit -m "Release Grey Ghost v0.25.0"
+   git commit -m "Release Grey Ghost v0.28.0"
    git push
 
 Railway should redeploy after the push.
