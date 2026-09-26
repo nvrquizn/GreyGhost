@@ -31,10 +31,11 @@ async function logReaction(
   if (!message?.guild || !message.author) return;
 
   const settings = await getGuildSettings(message.guild.id);
-  if (!settings.reactionLogChannelId) return;
+  const logChannelId = settings.serverLogChannelId ?? settings.reactionLogChannelId;
+  if (!logChannelId) return;
 
   const channel = await message.guild.channels
-    .fetch(settings.reactionLogChannelId)
+    .fetch(logChannelId)
     .catch(() => null);
   if (!channel || channel.type !== ChannelType.GuildText) return;
 

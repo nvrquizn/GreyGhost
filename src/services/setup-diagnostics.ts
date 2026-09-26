@@ -29,12 +29,20 @@ export async function diagnoseGuildSetup(guild: Guild): Promise<SetupDiagnostics
     result.errors.push("Grey Ghost needs **Manage Channels** to create and archive modmail tickets.");
   }
 
+  if (settings.serverLogChannelId ?? settings.reactionLogChannelId) {
+    if (botMember.permissions.has(PermissionFlagsBits.ViewAuditLog)) {
+      result.passed.push("Grey Ghost has **View Audit Log** to identify who changed channels and permissions.");
+    } else {
+      result.warnings.push("Grant Grey Ghost **View Audit Log** to identify who changed channels and permissions. Events will still be logged without it.");
+    }
+  }
+
   const channelSettings: Array<[string, string | undefined]> = [
     ["Welcome channel", settings.welcomeChannelId],
     ["Join/leave log", settings.logChannelId],
     ["Suggestions channel", settings.suggestionChannelId],
     ["Collection announcements", settings.collectionAnnouncementChannelId],
-    ["Reaction log", settings.reactionLogChannelId],
+    ["Server logs", settings.serverLogChannelId ?? settings.reactionLogChannelId],
     ["Statistics dashboard", settings.statsChannelId],
   ];
 

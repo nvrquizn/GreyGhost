@@ -20,7 +20,8 @@ current build supports both slash commands and role-aware `?` prefix commands.
 - `/setup check` — checks configured channels, permissions, panels, and title roles
 - `/setup modmail` — configures the private ticket category, staff role, and transcript log
 - `/setup moderation` — chooses the private moderation case-log channel
-- `/setup reaction-logs` — chooses where added and removed reactions are recorded
+- `/setup server-logs` — chooses one private channel for message, channel,
+  permission, thread, ghost-ping, and reaction activity
 - `/backup create` and `/backup restore` — export or restore server-specific bot data
 - `/selfroles configure` — selects up to 25 roles for a self-role panel
 - `/selfroles emoji` — assigns an emoji to a configured role button
@@ -71,7 +72,8 @@ current build supports both slash commands and role-aware `?` prefix commands.
 - Welcomes new members at the gates of King's Landing
 - Automatically assigns the configured newcomer role
 - Records member joins and departures in a private log channel
-- Records every added and removed message reaction in a designated private log
+- Records message edits/deletions, ghost pings, reactions, and channel/thread
+  creation, deletion, renaming, settings, and permission changes in one private log
 
 ## Self-role panels
 
@@ -177,6 +179,22 @@ slash command are delivered through DM; Grey Ghost reacts with 📬 after delive
 Prefix commands enforce the same Discord permission and role-hierarchy checks
 as slash commands. `/help` and `?help` share one role-aware catalogue, hiding
 configuration and moderation commands from members who cannot use them.
+
+## Server audit logs
+
+Configure one private destination with `/setup server-logs`. Grey Ghost records
+message edits and deletions, bulk deletions, reactions, channel/category/thread
+creation and deletion, renames, category moves, topics, slowmode, voice limits,
+thread archive/lock state, and permission-overwrite changes. Permission entries
+name every affected Discord permission and show whether it became allowed,
+denied, or reset.
+
+If a message directly mentioning a member is deleted within 30 seconds, the log
+marks it as a ghost ping and Grey Ghost privately notifies each directly
+mentioned member. Bot-authored events are ignored. Grant Grey Ghost **View Audit
+Log** if staff should see who performed channel, category, thread, or permission
+changes; logging still works without that permission, but the actor is shown as
+unavailable.
 
 ## Moderation cases
 
