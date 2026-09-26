@@ -10,6 +10,14 @@ current build supports both slash commands and role-aware `?` prefix commands.
 - `?command` — runs the same command through the optional question-mark prefix
 - `?help` — shows only the public and staff commands the invoking member may use
 - `/about` — introduces Grey Ghost
+- `/remindme set`, `/remindme list`, and `/remindme cancel` — manage up to 20
+  persistent personal reminders, from one minute to 365 days
+- `/userinfo` — shows a member's account, server dates, roles, boost status, and avatar
+- `/serverinfo` — shows the server owner, creation date, member/channel counts,
+  roles, emojis, stickers, boosts, and verification level
+- `/rolemembers` — privately pages through members who have a selected role
+- `/whohas` — privately pages through members who inherit a selected Discord permission
+- `/spoiler` — safely posts text behind Discord's spoiler covering
 - `/testwelcome` or `?testwelcome` — safely previews the configured welcome message
 - `/setup onboarding` — configures the welcome channel, join/leave log, and
   automatic newcomer role
@@ -73,8 +81,22 @@ current build supports both slash commands and role-aware `?` prefix commands.
 - Welcomes new members at the gates of King's Landing
 - Automatically assigns the configured newcomer role
 - Records member joins and departures in a private log channel
-- Records message edits/deletions, ghost pings, reactions, and channel/thread
-  creation, deletion, renaming, settings, and permission changes in one private log
+- Records message edits/deletions, ghost pings, and channel/thread creation,
+  deletion, renaming, settings, and permission changes in the server log while
+  keeping reaction activity in its own private log
+
+## Reminders and utility commands
+
+Reminder durations use compact values such as `30m`, `2h`, `7d`, or `4w`.
+Grey Ghost posts the reminder in the channel where it was created and falls
+back to a DM if that channel is unavailable. Pending reminders survive bot
+restarts, are included in server backups, and are limited to 20 per member.
+
+`/rolemembers` lists one selected role, while `/whohas` checks effective Discord
+permissions inherited from every role. Both results are private and split into
+pages of 20 members. `/spoiler` disables mentions inside the concealed text;
+when its `?spoiler` form is used, Grey Ghost removes the visible command message
+after posting the covered version, provided it can manage that message.
 
 ## Self-role panels
 
@@ -167,6 +189,10 @@ containing spaces may be placed in quotation marks. For example:
 
 ```text
 ?profile view @member
+?remindme set 2h "Check the event sign-ups"
+?userinfo @member
+?whohas manage-events
+?spoiler "A concealed message"
 ?housepoints standings
 ?warn @member "Repeatedly posting scam links"
 ?joust enter 3 destrier @House-Targaryen 1 1 0

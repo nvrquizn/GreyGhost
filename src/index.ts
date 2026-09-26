@@ -23,6 +23,7 @@ import { registerPrefixCommands } from "./prefix/handler.js";
 import { registerReactionEvents } from "./events/reaction-events.js";
 import { registerServerLogEvents } from "./events/server-log-events.js";
 import { registerInviteTracking } from "./events/invite-tracking.js";
+import { registerReminderRuntime } from "./reminders/runtime.js";
 
 const client = new Client({
   intents: [
@@ -51,6 +52,7 @@ registerPrefixCommands(client);
 registerReactionEvents(client);
 registerServerLogEvents(client);
 registerInviteTracking(client);
+registerReminderRuntime(client);
 
 client.once(Events.ClientReady, (readyClient) => {
   readyClient.user.setActivity("the mists of Dragonstone", {

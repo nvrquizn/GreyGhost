@@ -268,6 +268,7 @@ function prefixInteraction(
   };
 
   const interaction = {
+    sourceMessage: message,
     client: message.client,
     guild: message.guild,
     guildId: message.guildId,

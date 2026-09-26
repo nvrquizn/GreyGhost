@@ -36,6 +36,15 @@ const memberInviteRecordSchema = z.object({
   joinedAt: z.number().int().positive(),
 });
 
+const reminderSchema = z.object({
+  id: z.string().min(1).max(20),
+  userId: z.string(),
+  channelId: z.string(),
+  text: z.string().min(1).max(1500),
+  dueAt: z.number().int().positive(),
+  createdAt: z.number().int().positive(),
+});
+
 const housePointTransactionSchema = z.object({
   id: z.string(),
   houseRoleId: z.string(),
@@ -269,6 +278,7 @@ export const guildSettingsSchema = z.object({
     .optional(),
   memberProfiles: z.record(z.string(), memberProfileSchema).optional(),
   memberInviteRecords: z.record(z.string(), memberInviteRecordSchema).optional(),
+  reminders: z.record(z.string(), reminderSchema).optional(),
   housePoints: housePointsSchema.optional(),
   loreEntries: z.record(z.string(), loreEntrySchema).optional(),
   hiddenLoreEntryIds: z.array(z.string()).max(500).optional(),
@@ -285,6 +295,7 @@ export type SelfRolePanel = NonNullable<GuildSettings["selfRolePanels"]>[string]
 export type CollectionSet = NonNullable<GuildSettings["collectionSets"]>[string];
 export type MemberProfile = NonNullable<GuildSettings["memberProfiles"]>[string];
 export type MemberInviteRecord = NonNullable<GuildSettings["memberInviteRecords"]>[string];
+export type Reminder = NonNullable<GuildSettings["reminders"]>[string];
 export type HousePoints = NonNullable<GuildSettings["housePoints"]>;
 export type HousePointTransaction = HousePoints["transactions"][number];
 export type LoreEntry = z.infer<typeof loreEntrySchema>;
@@ -443,6 +454,79 @@ export async function deleteMemberInviteRecord(guildId: string, memberId: string
   const guildSettings = settings[guildId];
   if (guildSettings?.memberInviteRecords) delete guildSettings.memberInviteRecords[memberId];
   writeQueue = writeQueue.then(saveSettings);
+  await writeQueue;
+}
+
+export async function createReminder(
+  guildId: string,
+  input: Omit<Reminder, "id" | "createdAt">,
+): Promise<Reminder> {
+  let created: Reminder | undefined;
+  writeQueue = writeQueue.catch(() => undefined).then(async () => {
+    const settings = await loadSettings();
+    const guildSettings = settings[guildId] ?? {};
+    created = reminderSchema.parse({
+      ...input,
+      id: randomBytes(4).toString("hex"),
+      createdAt: Date.now(),
+    });
+    guildSettings.reminders = {
+      ...guildSettings.reminders,
+      [created.id]: created,
+    };
+    settings[guildId] = guildSettings;
+    await saveSettings();
+  });
+  await writeQueue;
+  if (!created) throw new Error("REMINDER_CREATE_FAILED");
+  return created;
+}
+
+export async function getMemberReminders(guildId: string, userId: string): Promise<Reminder[]> {
+  const settings = await getGuildSettings(guildId);
+  return Object.values(settings.reminders ?? {})
+    .filter((reminder) => reminder.userId === userId)
+    .sort((left, right) => left.dueAt - right.dueAt);
+}
+
+export async function deleteMemberReminder(
+  guildId: string,
+  userId: string,
+  reminderId: string,
+): Promise<boolean> {
+  let deleted = false;
+  writeQueue = writeQueue.catch(() => undefined).then(async () => {
+    const settings = await loadSettings();
+    const reminders = settings[guildId]?.reminders;
+    const reminder = reminders?.[reminderId];
+    if (!reminder || reminder.userId !== userId) return;
+    delete reminders[reminderId];
+    deleted = true;
+    await saveSettings();
+  });
+  await writeQueue;
+  return deleted;
+}
+
+export async function getDueReminders(now = Date.now()): Promise<Array<{ guildId: string; reminder: Reminder }>> {
+  const settings = await loadSettings();
+  const due: Array<{ guildId: string; reminder: Reminder }> = [];
+  for (const [guildId, guildSettings] of Object.entries(settings)) {
+    for (const reminder of Object.values(guildSettings.reminders ?? {})) {
+      if (reminder.dueAt <= now) due.push({ guildId, reminder });
+    }
+  }
+  return due.sort((left, right) => left.reminder.dueAt - right.reminder.dueAt);
+}
+
+export async function deleteReminder(guildId: string, reminderId: string): Promise<void> {
+  writeQueue = writeQueue.catch(() => undefined).then(async () => {
+    const settings = await loadSettings();
+    const reminders = settings[guildId]?.reminders;
+    if (!reminders?.[reminderId]) return;
+    delete reminders[reminderId];
+    await saveSettings();
+  });
   await writeQueue;
 }
 

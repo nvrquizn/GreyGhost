@@ -1,16 +1,16 @@
-GREY GHOST v0.16.1 — SAFE REPLACEMENT PACKAGE
+GREY GHOST v0.17.0 — SAFE REPLACEMENT PACKAGE
 
 This package contains the complete bot source code, so it can safely restore a
-src folder while installing the invite and role-log update.
+src folder while installing the reminder and utility-command update.
 
 1. Extract this ZIP.
-2. Open the extracted Grey-Ghost-v0.16.1-safe-replacement folder.
+2. Open the extracted Grey-Ghost-v0.17.0-safe-replacement folder.
 3. Select src, package.json, package-lock.json, tsconfig.json, and README.md.
 4. Drag them directly into the TOP LEVEL of your existing Grey Ghost bot folder.
 5. Choose Replace for the matching src folder and files.
 
 Choosing Replace for src is safe with THIS package because its src folder is
-complete. It contains all earlier files and the v0.16.1 additions.
+complete. It contains all earlier files and the v0.17.0 additions.
 
 The paths must remain exactly as shown. For example:
 
@@ -38,15 +38,20 @@ latest commit from Railway.
 Message Content Intent must remain enabled in the Discord Developer Portal for
 modmail and ? prefix commands.
 
-The new test-welcome commands are:
+The v0.17.0 commands are:
 
-  /testwelcome
-  ?testwelcome
+  /remindme set, list, cancel
+  /userinfo
+  /serverinfo
+  /rolemembers
+  /whohas
+  /spoiler
 
-They post the configured welcome message without assigning a role or creating a
-fake join-log entry.
+Each is also available with the ? prefix. Reminder durations use forms such as
+30m, 2h, 7d, or 4w. Run npm run commands:deploy so Discord receives the new
+slash commands.
 
-Configure the unified server log after deployment with:
+Configure the main server log after deployment with:
 
   /setup server-logs
 

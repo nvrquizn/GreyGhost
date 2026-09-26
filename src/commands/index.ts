@@ -29,6 +29,14 @@ import { lockCommand, purgeCommand, slowmodeCommand, unlockCommand } from "./cha
 import { quizCommand } from "./quiz.js";
 import { joustCommand } from "./joust.js";
 import { testWelcomeCommand } from "./testwelcome.js";
+import { remindMeCommand } from "./remindme.js";
+import {
+  roleMembersCommand,
+  serverInfoCommand,
+  userInfoCommand,
+  whoHasCommand,
+} from "./information.js";
+import { spoilerCommand } from "./spoiler.js";
 
 export const commands: Command[] = [
   pingCommand,
@@ -62,6 +70,12 @@ export const commands: Command[] = [
   quizCommand,
   joustCommand,
   testWelcomeCommand,
+  remindMeCommand,
+  userInfoCommand,
+  serverInfoCommand,
+  roleMembersCommand,
+  whoHasCommand,
+  spoilerCommand,
 ];
 
 export const commandMap = new Map(
