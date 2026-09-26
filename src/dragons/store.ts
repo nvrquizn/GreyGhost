@@ -148,7 +148,7 @@ export async function createDragon(guildId: string, input: {
   return mutate((data) => {
     const guild = guildOf(data, guildId);
     if (Object.values(guild.dragons).some((dragon) => dragon.name.toLowerCase() === input.name.trim().toLowerCase())) throw new Error("DRAGON_NAME_TAKEN");
-    if (Object.values(guild.dragons).some((dragon) => dragon.status === "bonded" && dragon.riderId === input.riderId)) throw new Error("RIDER_ALREADY_BONDED");
+    if (Object.values(guild.dragons).some((dragon) => dragon.riderId === input.riderId || dragon.formerRiderIds.includes(input.riderId))) throw new Error("RIDER_ALREADY_HAS_DRAGON");
     const id = guild.nextDragonNumber++;
     const now = Date.now();
     const dragon = dragonSchema.parse({
@@ -185,6 +185,46 @@ export async function findDragonByName(guildId: string, name: string): Promise<D
 
 export async function getRiderDragon(guildId: string, riderId: string): Promise<Dragon | undefined> {
   return (await getDragons(guildId)).find((dragon) => dragon.status === "bonded" && dragon.riderId === riderId);
+}
+
+export async function getFormerRiderDragon(guildId: string, riderId: string): Promise<Dragon | undefined> {
+  return (await getDragons(guildId))
+    .filter((dragon) => dragon.status === "wild" && dragon.formerRiderIds.includes(riderId))
+    .sort((a, b) => (b.wildAt ?? 0) - (a.wildAt ?? 0))[0];
+}
+
+export async function restoreRiderDragon(guildId: string, riderId: string): Promise<Dragon | undefined> {
+  return mutate((data) => {
+    const guild = guildOf(data, guildId);
+    const existing = Object.values(guild.dragons).find((dragon) => dragon.status === "bonded" && dragon.riderId === riderId);
+    if (existing) return dragonSchema.parse(existing);
+    const dragon = Object.values(guild.dragons)
+      .filter((entry) => entry.status === "wild" && entry.formerRiderIds.includes(riderId))
+      .sort((a, b) => (b.wildAt ?? 0) - (a.wildAt ?? 0))[0];
+    if (!dragon) return undefined;
+    const now = Date.now();
+    dragon.status = "bonded";
+    dragon.riderId = riderId;
+    delete dragon.wildAt;
+    dragon.history.push({ at: now, text: `<@${riderId}> returned to service as a Dragonrider; their bond was restored.` });
+    return dragonSchema.parse(dragon);
+  });
+}
+
+export async function addDragonGrowthDays(guildId: string, dragonId: number, days: number, actorId: string): Promise<{ dragon: Dragon; previousStage: DragonStage; newStage: DragonStage }> {
+  return mutate((data) => {
+    const dragon = guildOf(data, guildId).dragons[String(dragonId)];
+    if (!dragon) throw new Error("DRAGON_NOT_FOUND");
+    if (!Number.isInteger(days) || days < 1) throw new Error("INVALID_GROWTH_DAYS");
+    const previousStage = dragonStage(dragon);
+    dragon.createdAt = Math.max(1, dragon.createdAt - days * 86_400_000);
+    dragon.fedDays += days;
+    const newStage = dragonStage(dragon);
+    const now = Date.now();
+    dragon.history.push({ at: now, text: `<@${actorId}> advanced the dragon's growth by ${days} day${days === 1 ? "" : "s"}.` });
+    if (newStage !== previousStage) dragon.history.push({ at: now, text: `Grew from ${previousStage.replace("_", " ")} to ${newStage.replace("_", " ")}.` });
+    return { dragon: dragonSchema.parse(dragon), previousStage, newStage };
+  });
 }
 
 export async function feedDragon(guildId: string, dragonId: number, now = Date.now()): Promise<{ dragon: Dragon; grew: boolean; alreadyFed: boolean }> {

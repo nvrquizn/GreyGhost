@@ -422,3 +422,12 @@ Grey Ghost now maintains a permanent Dragon Registry for the moderator team. Dra
 Members with Realm characters can also open confirmation-based trades for eligible inventory items and coin. Both offers must be confirmed unchanged before the exchange completes; changing either side clears confirmations.
 
 Expeditions now keep a live text status in-channel showing the party and choice progress, and automatically ping party members when a stage opens or the expedition returns.
+
+
+## v0.24.1 — Dragonrider Access & Growth Controls
+
+- Configure the role required for moderation commands and dragon creation with `/setup moderator-role`.
+- Moderation commands now require the configured moderator role in addition to their normal Discord permissions.
+- Dragonriders may create one dragon per person; retired dragons return to their original rider if that rider rejoins the moderator role.
+- Server managers can add manual growth days with `/dragon growth`, advancing both age and feeding growth progress.
+- Retired dragons remain historical records and cannot be reassigned to another rider.

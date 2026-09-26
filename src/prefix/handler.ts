@@ -13,6 +13,7 @@ import {
   type User,
 } from "discord.js";
 import { commandMap } from "../commands/index.js";
+import { MODERATION_COMMAND_NAMES, hasRequiredModeratorRole, moderatorRoleRequirementText } from "../moderation/access.js";
 
 const PREFIX = "?";
 
@@ -351,6 +352,13 @@ export async function handlePrefixMessage(message: Message): Promise<void> {
       return;
     }
     const json = command.data.toJSON() as CommandJson;
+    if (MODERATION_COMMAND_NAMES.has(commandName)) {
+      const allowed = await hasRequiredModeratorRole(message.guildId, message.member);
+      if (!allowed) {
+        await message.reply(await moderatorRoleRequirementText(message.guildId, message.guild));
+        return;
+      }
+    }
     if (json.default_member_permissions && !message.member.permissions.has(BigInt(json.default_member_permissions))) {
       await message.reply("You do not have permission to use that command.");
       return;

@@ -33,6 +33,7 @@ function settingsSummary(settings: GuildSettings): string {
     `**Server logs:** ${settings.serverLogChannelId ? `<#${settings.serverLogChannelId}>` : "Not configured"}`,
     `**Reaction logs:** ${settings.reactionLogChannelId ? `<#${settings.reactionLogChannelId}>` : "Not configured"}`,
     `**Chronicles:** ${settings.chronicleChannelId ? `<#${settings.chronicleChannelId}>` : "Not configured"}`,
+    `**Moderator role:** ${settings.moderatorRoleId ? `<@&${settings.moderatorRoleId}>` : "Not configured"}`,
     `**Modmail:** ${settings.modmail ? `tickets in <#${settings.modmail.categoryId}> · staff <@&${settings.modmail.staffRoleId}> · logs <#${settings.modmail.logChannelId}>` : "Not configured"}`,
     `**Moderation logs:** ${settings.moderation ? `<#${settings.moderation.logChannelId}>` : "Not configured"}`,
   ].join("\n");
@@ -169,6 +170,15 @@ export const setupCommand: Command = {
     )
     .addSubcommand((subcommand) =>
       subcommand
+        .setName("moderator-role")
+        .setDescription("Choose the role required for Grey Ghost moderation commands and dragon creation.")
+        .addRoleOption((option) => option
+          .setName("role")
+          .setDescription("The moderator role, such as Dragonrider.")
+          .setRequired(true)),
+    )
+    .addSubcommand((subcommand) =>
+      subcommand
         .setName("clear")
         .setDescription("Disable one or all onboarding settings.")
         .addStringOption((option) =>
@@ -189,6 +199,7 @@ export const setupCommand: Command = {
               { name: "Server logs", value: "serverLogChannelId" },
               { name: "Reaction logs", value: "reactionLogChannelId" },
               { name: "Chronicles channel", value: "chronicleChannelId" },
+              { name: "Moderator role", value: "moderatorRoleId" },
               { name: "All basic server settings", value: "all" },
             ),
         ),
@@ -253,6 +264,22 @@ export const setupCommand: Command = {
 
       await interaction.reply({
         content: `The selected setting has been cleared.\n\n${settingsSummary(settings)}`,
+        flags: MessageFlags.Ephemeral,
+      });
+      return;
+    }
+
+    if (subcommand === "moderator-role") {
+      const role = interaction.options.getRole("role", true);
+      if (role.id === interaction.guild.roles.everyone.id) {
+        await interaction.reply({ content: "Choose a staff role—not @everyone—as the moderator role.", flags: MessageFlags.Ephemeral });
+        return;
+      }
+      const settings = await updateGuildSettings(interaction.guildId, { moderatorRoleId: role.id });
+      await interaction.reply({
+        content: `${role} is now required for Grey Ghost moderation commands and dragon creation. Members may have only one dragon each.
+
+${settingsSummary(settings)}`,
         flags: MessageFlags.Ephemeral,
       });
       return;

@@ -28,6 +28,7 @@ import { registerGovernanceInteractions } from "./governance/runtime.js";
 import { registerEventManagerInteractions } from "./events-manager/runtime.js";
 import { registerChronicleRuntime } from "./chronicles/runtime.js";
 import { registerDragonRuntime } from "./dragons/runtime.js";
+import { MODERATION_COMMAND_NAMES, hasRequiredModeratorRole, moderatorRoleRequirementText } from "./moderation/access.js";
 
 const client = new Client({
   intents: [
@@ -96,6 +97,16 @@ client.on(Events.InteractionCreate, async (interaction) => {
   }
 
   try {
+    if (interaction.inCachedGuild() && MODERATION_COMMAND_NAMES.has(interaction.commandName)) {
+      const allowed = await hasRequiredModeratorRole(interaction.guildId, interaction.member);
+      if (!allowed) {
+        await interaction.reply({
+          content: await moderatorRoleRequirementText(interaction.guildId, interaction.guild),
+          flags: MessageFlags.Ephemeral,
+        });
+        return;
+      }
+    }
     await command.execute(interaction);
   } catch (error) {
     console.error(`Command failed: ${interaction.commandName}`, error);

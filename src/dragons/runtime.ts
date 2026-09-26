@@ -1,17 +1,26 @@
 import { Events, type Client, type GuildMember, type PartialGuildMember } from "discord.js";
-import { retireRiderDragons } from "./store.js";
+import { hasRequiredModeratorRole } from "../moderation/access.js";
+import { restoreRiderDragon, retireRiderDragons } from "./store.js";
 
-function hasDragonriderRole(member: GuildMember | PartialGuildMember): boolean {
-  return member.roles.cache.some((role) => role.name.toLowerCase() === "dragonrider");
+async function isDragonrider(member: GuildMember | PartialGuildMember): Promise<boolean> {
+  return hasRequiredModeratorRole(member.guild.id, member);
 }
 
 export function registerDragonRuntime(client: Client): void {
   client.on(Events.GuildMemberUpdate, (oldMember, newMember) => {
-    if (hasDragonriderRole(oldMember) && !hasDragonriderRole(newMember)) {
-      void retireRiderDragons(newMember.guild.id, newMember.id).catch((error) => {
-        console.error(`Could not retire dragons for ${newMember.id}:`, error);
-      });
-    }
+    void (async () => {
+      const oldEligible = await isDragonrider(oldMember);
+      const newEligible = await isDragonrider(newMember);
+      if (oldEligible && !newEligible) {
+        await retireRiderDragons(newMember.guild.id, newMember.id);
+        return;
+      }
+      if (!oldEligible && newEligible) {
+        await restoreRiderDragon(newMember.guild.id, newMember.id);
+      }
+    })().catch((error) => {
+      console.error(`Could not update dragon status for ${newMember.id}:`, error);
+    });
   });
 
   client.on(Events.GuildMemberRemove, (member) => {

@@ -394,6 +394,7 @@ export const guildSettingsSchema = z.object({
   statsChannelId: z.string().optional(),
   statsMessageId: z.string().optional(),
   chronicleChannelId: z.string().optional(),
+  moderatorRoleId: z.string().optional(),
   collectionSets: z.record(z.string(), collectionSetSchema).optional(),
   selfRolePanels: z
     .record(
@@ -524,6 +525,7 @@ export async function clearGuildSetting(
     delete current.statsChannelId;
     delete current.statsMessageId;
     delete current.chronicleChannelId;
+    delete current.moderatorRoleId;
     settings[guildId] = current;
   } else {
     const current = { ...settings[guildId] };

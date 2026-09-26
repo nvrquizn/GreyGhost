@@ -2,6 +2,7 @@ import { EmbedBuilder, MessageFlags, PermissionFlagsBits, SlashCommandBuilder, t
 import type { Command } from "../types/command.js";
 import {
   DRAGON_GROWTH,
+  addDragonGrowthDays,
   createDragon,
   dragonAgeDays,
   dragonStage,
@@ -9,15 +10,18 @@ import {
   feedDragon,
   findDragonByName,
   getDragon,
+  getFormerRiderDragon,
   getDragons,
   getRiderDragon,
   nextDragonGrowth,
   recordDragonActivity,
   recordDragonEncounter,
+  restoreRiderDragon,
   retireDragon,
   type Dragon,
   type DragonStage,
 } from "../dragons/store.js";
+import { hasRequiredModeratorRole, moderatorRoleRequirementText } from "../moderation/access.js";
 
 const stageLabels: Record<DragonStage, string> = {
   hatchling: "Hatchling",
@@ -127,10 +131,9 @@ function canManage(interaction: ChatInputCommandInteraction<"cached">): boolean 
   return interaction.member.permissions.has(PermissionFlagsBits.ManageGuild) || interaction.user.id === interaction.guild.ownerId;
 }
 
-function riderEligible(interaction: ChatInputCommandInteraction<"cached">, userId: string): boolean {
-  if (userId === interaction.guild.ownerId) return true;
-  const member = interaction.guild.members.cache.get(userId);
-  return Boolean(member?.roles.cache.some((role) => role.name.toLowerCase() === "dragonrider"));
+async function riderEligible(interaction: ChatInputCommandInteraction<"cached">, userId: string): Promise<boolean> {
+  const member = interaction.guild.members.cache.get(userId) ?? await interaction.guild.members.fetch(userId).catch(() => null);
+  return member ? hasRequiredModeratorRole(interaction.guildId, member) : false;
 }
 
 const behavior = {
@@ -200,6 +203,9 @@ export const dragonCommand: Command = {
     .addSubcommand((sub) => sub.setName("fly").setDescription("Take a small or older dragon on a flight."))
     .addSubcommand((sub) => sub.setName("patrol").setDescription("Send a medium or older dragon on patrol."))
     .addSubcommand((sub) => sub.setName("hunt").setDescription("Take a medium or older dragon hunting; this also counts as feeding."))
+    .addSubcommand((sub) => sub.setName("growth").setDescription("Add manual growth days to a dragon.")
+      .addStringOption((option) => option.setName("dragon").setDescription("Dragon name.").setRequired(true))
+      .addIntegerOption((option) => option.setName("days").setDescription("Growth days to add.").setMinValue(1).setMaxValue(3650).setRequired(true)))
     .addSubcommand((sub) => sub.setName("retire").setDescription("Release a bonded dragon permanently into the wild.")
       .addStringOption((option) => option.setName("dragon").setDescription("Dragon name.").setRequired(true)))
     .addSubcommand((sub) => sub.setName("edit").setDescription("Edit a dragon's recorded details.")
@@ -213,9 +219,30 @@ export const dragonCommand: Command = {
     const sub = interaction.options.getSubcommand();
 
     if (sub === "create") {
-      if (!canManage(interaction)) { await interaction.reply({ content: "Only a server manager may create staff dragons.", flags: MessageFlags.Ephemeral }); return; }
+      if (!(await hasRequiredModeratorRole(interaction.guildId, interaction.member))) {
+        await interaction.reply({ content: await moderatorRoleRequirementText(interaction.guildId, interaction.guild), flags: MessageFlags.Ephemeral });
+        return;
+      }
       const rider = interaction.options.getUser("rider", true);
-      if (!riderEligible(interaction, rider.id)) { await interaction.reply({ content: "That member must hold the **Dragonrider** role before receiving a dragon.", flags: MessageFlags.Ephemeral }); return; }
+      if (rider.id !== interaction.user.id && !canManage(interaction)) {
+        await interaction.reply({ content: "You may create a dragon only for yourself. A server manager may create one for another Dragonrider.", flags: MessageFlags.Ephemeral });
+        return;
+      }
+      if (!(await riderEligible(interaction, rider.id))) {
+        await interaction.reply({ content: "That member does not have the configured moderator/Dragonrider role, so Grey Ghost cannot bond them to a dragon.", flags: MessageFlags.Ephemeral });
+        return;
+      }
+      const bonded = await getRiderDragon(interaction.guildId, rider.id);
+      if (bonded) {
+        await interaction.reply({ content: `${rider} already has **${bonded.name}**. A Dragonrider may have only one dragon.`, flags: MessageFlags.Ephemeral });
+        return;
+      }
+      const retired = await getFormerRiderDragon(interaction.guildId, rider.id);
+      if (retired) {
+        const restored = await restoreRiderDragon(interaction.guildId, rider.id);
+        await interaction.reply({ content: `**${retired.name}** was already recorded as ${rider}'s retired dragon. Their old bond has been restored instead of creating a second dragon.`, embeds: restored ? [dragonEmbed(restored)] : [] });
+        return;
+      }
       try {
         const dragon = await createDragon(interaction.guildId, {
           riderId: rider.id,
@@ -233,7 +260,7 @@ export const dragonCommand: Command = {
         await interaction.reply({ embeds: [dragonEmbed(dragon)] });
       } catch (error) {
         const code = (error as Error).message;
-        await interaction.reply({ content: code === "DRAGON_NAME_TAKEN" ? "A dragon with that name is already in the registry." : code === "RIDER_ALREADY_BONDED" ? "That Dragonrider already has a bonded dragon." : `The dragon could not be created: ${code}.`, flags: MessageFlags.Ephemeral });
+        await interaction.reply({ content: code === "DRAGON_NAME_TAKEN" ? "A dragon with that name is already in the registry." : code === "RIDER_ALREADY_HAS_DRAGON" ? "That Dragonrider already has a dragon in the registry and may have only one." : `The dragon could not be created: ${code}.`, flags: MessageFlags.Ephemeral });
       }
       return;
     }
@@ -255,6 +282,21 @@ export const dragonCommand: Command = {
       if (!dragon) { await interaction.reply({ content: "That dragon was not found.", flags: MessageFlags.Ephemeral }); return; }
       const lines = dragon.history.slice(-12).map((entry) => `<t:${Math.floor(entry.at / 1000)}:d> · ${entry.text}`);
       await interaction.reply({ embeds: [new EmbedBuilder().setColor(0x8f564a).setTitle(`History of ${dragon.name}`).setDescription(lines.join("\n").slice(0, 4096) || "No history has been recorded yet.")] });
+      return;
+    }
+
+    if (sub === "growth") {
+      if (!canManage(interaction)) { await interaction.reply({ content: "Only a server manager may add manual dragon growth.", flags: MessageFlags.Ephemeral }); return; }
+      const dragon = await findDragonByName(interaction.guildId, interaction.options.getString("dragon", true));
+      if (!dragon) { await interaction.reply({ content: "That dragon was not found.", flags: MessageFlags.Ephemeral }); return; }
+      const days = interaction.options.getInteger("days", true);
+      const result = await addDragonGrowthDays(interaction.guildId, dragon.id, days, interaction.user.id);
+      const grew = result.previousStage !== result.newStage
+        ? `
+**Growth stage:** ${stageLabels[result.previousStage]} → **${stageLabels[result.newStage]}**`
+        : `
+**Growth stage:** ${stageLabels[result.newStage]}`;
+      await interaction.reply({ content: `Added **${days} growth day${days === 1 ? "" : "s"}** to **${result.dragon.name}**.${grew}`, embeds: [dragonEmbed(result.dragon)] });
       return;
     }
 
