@@ -1,4 +1,4 @@
-GREY GHOST v0.29.5 — PROFILE PICTURE LOGGING — SAFE REPLACEMENT
+GREY GHOST v0.29.6 — TICKET CLOSURE CONTROLS — SAFE REPLACEMENT
 
 1. Keep your existing live/local files and folders:
    - .env
@@ -25,7 +25,7 @@ GREY GHOST v0.29.5 — PROFILE PICTURE LOGGING — SAFE REPLACEMENT
 
 6. If npm run check succeeds, commit and push:
    git add .
-   git commit -m "Release Grey Ghost v0.29.5"
+   git commit -m "Release Grey Ghost v0.29.6"
    git push
 
 Railway should redeploy after the push.

@@ -10,12 +10,16 @@ import {
   type Client,
 } from "discord.js";
 import { getGuildSettings, updateModmailTicket } from "../services/guild-settings.js";
+import { hasRequiredModeratorRole } from "../moderation/access.js";
 import {
   MODMAIL_CATEGORIES,
   closeTicket,
+  deleteClosedTicket,
   configuredGuildsForUser,
   findOpenTicket,
   openTicket,
+  isModmailStaffMember,
+  reopenTicket,
   refreshTicketHeader,
   ticketLabel,
 } from "./service.js";
@@ -59,30 +63,67 @@ export function registerModmailInteractions(client: Client): void {
 
       if (!interaction.isButton() || !interaction.inCachedGuild()) return;
       const [prefix, action, rawId] = interaction.customId.split(":");
-      if (prefix !== "modmail" || !rawId || !["claim", "close"].includes(action ?? "")) return;
-      const ticket = (await getGuildSettings(interaction.guildId)).modmail?.tickets[rawId];
-      if (!ticket || ticket.status !== "open") {
-        await interaction.reply({ content: "That ticket is no longer open.", flags: MessageFlags.Ephemeral });
+      if (prefix !== "modmail" || !rawId || !["claim", "close", "reopen", "delete"].includes(action ?? "")) return;
+      const settings = await getGuildSettings(interaction.guildId);
+      const ticket = settings.modmail?.tickets[rawId];
+      if (!ticket || ticket.status === "deleted") {
+        await interaction.reply({ content: "That ticket no longer exists.", flags: MessageFlags.Ephemeral });
         return;
       }
-      const config = (await getGuildSettings(interaction.guildId)).modmail;
-      const allowed = interaction.member.permissions.has("ManageGuild") || Boolean(config && interaction.member.roles.cache.has(config.staffRoleId));
+      const config = settings.modmail;
+      const allowed = await isModmailStaffMember(interaction.member, config?.staffRoleId);
       if (!allowed) {
         await interaction.reply({ content: "Only modmail staff can use that control.", flags: MessageFlags.Ephemeral });
         return;
       }
+
       if (action === "claim") {
+        if (ticket.status !== "open") {
+          await interaction.reply({ content: "That ticket is closed.", flags: MessageFlags.Ephemeral });
+          return;
+        }
         const updated = await updateModmailTicket(interaction.guildId, ticket.id, { claimedBy: interaction.user.id });
         if (updated) await refreshTicketHeader(interaction.guild, updated);
         await interaction.reply({ content: `${interaction.user} claimed ticket ${ticketLabel(ticket.id)}. This identity is visible only to staff.` });
         const user = await client.users.fetch(ticket.userId).catch(() => null);
         await user?.send(`Grey Ghost's staff have opened and begun reviewing ticket **${ticketLabel(ticket.id)}**.`).catch(() => undefined);
         if (!updated) throw new Error("TICKET_NOT_FOUND");
-      } else {
-        await interaction.deferReply();
-        await closeTicket(interaction.guild, ticket, interaction.user.id);
-        await interaction.editReply(`Ticket ${ticketLabel(ticket.id)} was closed.`);
+        return;
       }
+
+      if (action === "close") {
+        if (ticket.status !== "open") {
+          await interaction.reply({ content: "That ticket is already closed.", flags: MessageFlags.Ephemeral });
+          return;
+        }
+        await interaction.deferReply({ flags: MessageFlags.Ephemeral });
+        await closeTicket(interaction.guild, ticket, interaction.user.id);
+        await interaction.editReply(`Ticket ${ticketLabel(ticket.id)} was closed. Use the panel above to reopen it or, if you are a Dragonrider, delete it.`);
+        return;
+      }
+
+      if (action === "reopen") {
+        if (ticket.status !== "closed") {
+          await interaction.reply({ content: "That ticket is already open.", flags: MessageFlags.Ephemeral });
+          return;
+        }
+        await interaction.deferReply({ flags: MessageFlags.Ephemeral });
+        await reopenTicket(interaction.guild, ticket, interaction.user.id);
+        await interaction.editReply(`Ticket ${ticketLabel(ticket.id)} was reopened.`);
+        return;
+      }
+
+      if (ticket.status !== "closed") {
+        await interaction.reply({ content: "Close the ticket before deleting it.", flags: MessageFlags.Ephemeral });
+        return;
+      }
+      const canDelete = interaction.member.permissions.has("ManageGuild") || await hasRequiredModeratorRole(interaction.guildId, interaction.member);
+      if (!canDelete) {
+        await interaction.reply({ content: "Dragonseeds may close and reopen tickets, but only Dragonriders or server managers may permanently delete them.", flags: MessageFlags.Ephemeral });
+        return;
+      }
+      await interaction.reply({ content: `Deleting closed ticket ${ticketLabel(ticket.id)}…`, flags: MessageFlags.Ephemeral });
+      await deleteClosedTicket(interaction.guild, ticket, interaction.user.id);
     } catch (error) {
       console.error("Modmail interaction failed:", error);
       if (interaction.isRepliable()) {

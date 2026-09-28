@@ -1,7 +1,7 @@
-import { MessageFlags, PermissionFlagsBits, SlashCommandBuilder } from "discord.js";
+import { MessageFlags, SlashCommandBuilder } from "discord.js";
 import type { Command } from "../types/command.js";
 import { getGuildSettings, updateModmailTicket } from "../services/guild-settings.js";
-import { closeTicket, findTicketByChannel, refreshTicketHeader, safeChannelName, sendAnonymousReply, ticketLabel } from "../modmail/service.js";
+import { closeTicket, findTicketByChannel, isModmailStaffMember, refreshTicketHeader, reopenTicket, sendAnonymousReply, ticketLabel } from "../modmail/service.js";
 
 export const modmailCommand: Command = {
   data: new SlashCommandBuilder()
@@ -26,7 +26,7 @@ export const modmailCommand: Command = {
       await interaction.reply({ content: "This is not a configured modmail ticket channel.", flags: MessageFlags.Ephemeral });
       return;
     }
-    const allowed = interaction.member.permissions.has(PermissionFlagsBits.ManageGuild) || interaction.member.roles.cache.has(config.staffRoleId);
+    const allowed = await isModmailStaffMember(interaction.member, config.staffRoleId);
     if (!allowed) {
       await interaction.reply({ content: "Only the configured modmail staff can use this command.", flags: MessageFlags.Ephemeral });
       return;
@@ -37,22 +37,15 @@ export const modmailCommand: Command = {
       return;
     }
     if (action === "reopen") {
+      if (ticket.status === "deleted") {
+        await interaction.reply({ content: "That ticket was permanently deleted and cannot be reopened.", flags: MessageFlags.Ephemeral });
+        return;
+      }
       if (ticket.status === "open") {
         await interaction.reply({ content: "That ticket is already open.", flags: MessageFlags.Ephemeral });
         return;
       }
-      const reopened = await updateModmailTicket(interaction.guildId, ticket.id, { status: "open", closedAt: undefined, closedBy: undefined, closeReason: undefined });
-      if (reopened) await refreshTicketHeader(interaction.guild, reopened);
-      const channel = interaction.channel;
-      if (channel?.isTextBased()) {
-        await channel.send(`🔓 ${interaction.user} reopened ticket ${ticketLabel(ticket.id)}.`);
-        if ("setName" in channel) {
-          const member = await interaction.client.users.fetch(ticket.userId).catch(() => null);
-          await channel.setName(`ticket-${String(ticket.id).padStart(4, "0")}-${safeChannelName(member?.username ?? "member")}`.slice(0, 100));
-        }
-      }
-      const user = await interaction.client.users.fetch(ticket.userId).catch(() => null);
-      await user?.send(`Your ticket **${ticketLabel(ticket.id)}** with **${interaction.guild.name}** has been reopened by staff.`).catch(() => undefined);
+      await reopenTicket(interaction.guild, ticket, interaction.user.id);
       await interaction.reply({ content: "Ticket reopened.", flags: MessageFlags.Ephemeral });
       return;
     }

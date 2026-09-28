@@ -220,12 +220,14 @@ export const modmailTicketSchema = z.object({
   headerMessageId: z.string().optional(),
   category: z.string().min(1).max(80),
   subject: z.string().min(1).max(100),
-  status: z.enum(["open", "closed"]),
+  status: z.enum(["open", "closed", "deleted"]),
   claimedBy: z.string().optional(),
   openedAt: z.number(),
   closedAt: z.number().optional(),
   closedBy: z.string().optional(),
   closeReason: z.string().max(500).optional(),
+  deletedAt: z.number().optional(),
+  deletedBy: z.string().optional(),
 });
 
 const modmailSchema = z.object({

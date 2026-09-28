@@ -497,3 +497,13 @@ Grey Ghost's moderation suite now includes direct warning history, case lookup, 
 ## v0.29.5 — Profile Picture Logging
 
 Grey Ghost now records member profile-picture updates in the configured server log channel. Both ordinary Discord avatar changes and server-specific profile-picture changes are supported, with before/after links and image previews included in the log embed.
+
+## v0.29.6 — Ticket Closure Controls
+
+- Closed modmail tickets now switch their header panel to **Reopen Ticket** and **Delete Ticket · Dragonrider** controls.
+- Dragonseeds (Trial Moderators) may view, claim, reply to, close, and reopen tickets.
+- Only Dragonriders (the configured moderator role) or server managers may permanently delete a closed ticket channel.
+- Reopening restores the normal ticket name, notifies the member, and returns the panel to Claim/Close controls.
+- Deleted ticket channels are marked as deleted in persistent ticket history and cannot be reopened.
+- Ticket deletion is recorded in the configured modmail log channel.
+

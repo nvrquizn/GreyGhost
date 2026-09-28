@@ -8,11 +8,13 @@ import {
   PermissionFlagsBits,
   type Client,
   type Guild,
+  type GuildMember,
   type GuildTextBasedChannel,
   type Message,
   type TextChannel,
   type User,
 } from "discord.js";
+import { configuredModeratorRoleId, hasRequiredModeratorRole } from "../moderation/access.js";
 import {
   createModmailTicket,
   getGuildSettings,
@@ -38,20 +40,38 @@ export function safeChannelName(username: string): string {
   return cleaned.slice(0, 45) || "member";
 }
 
+export async function isModmailStaffMember(member: GuildMember, configuredStaffRoleId?: string): Promise<boolean> {
+  if (member.permissions.has(PermissionFlagsBits.ManageGuild)) return true;
+  if (configuredStaffRoleId && member.roles.cache.has(configuredStaffRoleId)) return true;
+  if (member.roles.cache.some((role) => role.name.toLowerCase() === "dragonseed")) return true;
+  return hasRequiredModeratorRole(member.guild.id, member);
+}
+
 function ticketControls(ticket: ModmailTicket): ActionRowBuilder<ButtonBuilder> {
+  if (ticket.status === "closed") {
+    return new ActionRowBuilder<ButtonBuilder>().addComponents(
+      new ButtonBuilder()
+        .setCustomId(`modmail:reopen:${ticket.id}`)
+        .setLabel("Reopen Ticket")
+        .setStyle(ButtonStyle.Success),
+      new ButtonBuilder()
+        .setCustomId(`modmail:delete:${ticket.id}`)
+        .setLabel("Delete Ticket · Dragonrider")
+        .setStyle(ButtonStyle.Danger),
+    );
+  }
+
   const claimed = Boolean(ticket.claimedBy);
-  const closed = ticket.status === "closed";
   return new ActionRowBuilder<ButtonBuilder>().addComponents(
     new ButtonBuilder()
       .setCustomId(`modmail:claim:${ticket.id}`)
       .setLabel(claimed ? "Claimed" : "Claim")
       .setStyle(ButtonStyle.Primary)
-      .setDisabled(claimed || closed),
+      .setDisabled(claimed),
     new ButtonBuilder()
       .setCustomId(`modmail:close:${ticket.id}`)
       .setLabel("Close")
-      .setStyle(ButtonStyle.Danger)
-      .setDisabled(closed),
+      .setStyle(ButtonStyle.Danger),
   );
 }
 
@@ -126,8 +146,12 @@ export async function openTicket(
     topic: `Grey Ghost modmail ${ticketLabel(ticketNumber)} · ${user.tag} · ${user.id}`,
     permissionOverwrites: [
       { id: guild.roles.everyone.id, deny: [PermissionFlagsBits.ViewChannel] },
-      {
-        id: config.staffRoleId,
+      ...[...new Set([
+        config.staffRoleId,
+        await configuredModeratorRoleId(guild.id, guild),
+        guild.roles.cache.find((role) => role.name.toLowerCase() === "dragonseed")?.id,
+      ].filter((id): id is string => Boolean(id)))].map((id) => ({
+        id,
         allow: [
           PermissionFlagsBits.ViewChannel,
           PermissionFlagsBits.SendMessages,
@@ -135,7 +159,7 @@ export async function openTicket(
           PermissionFlagsBits.AttachFiles,
           PermissionFlagsBits.EmbedLinks,
         ],
-      },
+      })),
       {
         id: guild.client.user.id,
         allow: [
@@ -286,3 +310,67 @@ export async function closeTicket(
   }
   return updated;
 }
+export async function reopenTicket(
+  guild: Guild,
+  ticket: ModmailTicket,
+  reopenedBy: string,
+): Promise<ModmailTicket> {
+  if (ticket.status === "deleted") throw new Error("TICKET_DELETED");
+  if (ticket.status === "open") return ticket;
+
+  const reopened = await updateModmailTicket(guild.id, ticket.id, {
+    status: "open",
+    closedAt: undefined,
+    closedBy: undefined,
+    closeReason: undefined,
+    deletedAt: undefined,
+    deletedBy: undefined,
+  });
+  if (!reopened) throw new Error("TICKET_NOT_FOUND");
+
+  const channel = await guild.channels.fetch(ticket.channelId).catch(() => null);
+  const user = await guild.client.users.fetch(ticket.userId).catch(() => null);
+  if (channel?.type === ChannelType.GuildText) {
+    await channel.setName(`ticket-${String(ticket.id).padStart(4, "0")}-${safeChannelName(user?.username ?? "member")}`.slice(0, 100));
+    await channel.send(`🔓 <@${reopenedBy}> reopened ticket ${ticketLabel(ticket.id)}.`);
+  }
+  await refreshTicketHeader(guild, reopened);
+  await user?.send(`Your ticket **${ticketLabel(ticket.id)}** with **${guild.name}** has been reopened by staff.`).catch(() => undefined);
+  return reopened;
+}
+
+export async function deleteClosedTicket(
+  guild: Guild,
+  ticket: ModmailTicket,
+  deletedBy: string,
+): Promise<void> {
+  if (ticket.status !== "closed") throw new Error("TICKET_NOT_CLOSED");
+  const settings = await getGuildSettings(guild.id);
+  const channel = await guild.channels.fetch(ticket.channelId).catch(() => null);
+  if (!channel || channel.type !== ChannelType.GuildText) throw new Error("TICKET_CHANNEL_MISSING");
+
+  const updated = await updateModmailTicket(guild.id, ticket.id, {
+    status: "deleted",
+    deletedAt: Date.now(),
+    deletedBy,
+  });
+  if (!updated) throw new Error("TICKET_NOT_FOUND");
+
+  const logChannel = settings.modmail ? await guild.channels.fetch(settings.modmail.logChannelId).catch(() => null) : null;
+  if (logChannel?.isTextBased() && !logChannel.isDMBased()) {
+    await logChannel.send({
+      embeds: [new EmbedBuilder()
+        .setColor(0x5c5c5c)
+        .setTitle(`Deleted Modmail ${ticketLabel(ticket.id)}`)
+        .addFields(
+          { name: "Member", value: `<@${ticket.userId}> · \`${ticket.userId}\`` },
+          { name: "Deleted by", value: `<@${deletedBy}>`, inline: true },
+          { name: "Status", value: "Closed ticket channel permanently deleted", inline: true },
+        )
+        .setTimestamp()],
+    }).catch(() => undefined);
+  }
+
+  await channel.delete(`Closed modmail ticket ${ticketLabel(ticket.id)} deleted by ${deletedBy}`);
+}
+

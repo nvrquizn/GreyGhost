@@ -20,7 +20,6 @@ export const MODERATION_COMMAND_NAMES = new Set([
   "slowmode",
   "lock",
   "unlock",
-  "modmail",
 ]);
 
 export async function configuredModeratorRoleId(guildId: string, guild?: Guild): Promise<string | undefined> {

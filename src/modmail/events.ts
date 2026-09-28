@@ -1,14 +1,14 @@
 import { EmbedBuilder, Events, type Client } from "discord.js";
 import { buildCategoryMenu, configuredGuildsForUser } from "./interactions.js";
 import { getGuildSettings } from "../services/guild-settings.js";
-import { findOpenTicket, findTicketByChannel, forwardMemberMessage, refreshTicketHeader, sendAnonymousReply } from "./service.js";
+import { findOpenTicket, findTicketByChannel, forwardMemberMessage, isModmailStaffMember, refreshTicketHeader, sendAnonymousReply } from "./service.js";
 
 export function registerModmailEvents(client: Client): void {
   client.once(Events.ClientReady, async () => {
     for (const guild of client.guilds.cache.values()) {
       const settings = await getGuildSettings(guild.id);
       for (const ticket of Object.values(settings.modmail?.tickets ?? {})) {
-        if (ticket.status === "open") {
+        if (ticket.status !== "deleted") {
           await refreshTicketHeader(guild, ticket).catch((error) =>
             console.error(`Could not refresh modmail ticket ${ticket.id}:`, error),
           );
@@ -26,7 +26,7 @@ export function registerModmailEvents(client: Client): void {
         if (!ticket) return;
         const config = (await getGuildSettings(message.guildId)).modmail;
         const member = message.member;
-        const isStaff = Boolean(config && member && (member.permissions.has("ManageGuild") || member.roles.cache.has(config.staffRoleId)));
+        const isStaff = Boolean(member && await isModmailStaffMember(member, config?.staffRoleId));
         if (!isStaff) return;
         if (message.content.trimStart().startsWith("//")) {
           await message.react("📝").catch(() => undefined);

@@ -1,6 +1,7 @@
 import { Events, MessageFlags, type Client } from "discord.js";
 import { getGuildSettings } from "../services/guild-settings.js";
 import { helpPagePayload } from "./pagination.js";
+import { isModmailStaffMember } from "../modmail/service.js";
 
 export function registerHelpInteractions(client: Client): void {
   client.on(Events.InteractionCreate, async (interaction) => {
@@ -23,10 +24,8 @@ export function registerHelpInteractions(client: Client): void {
     let isStaff = false;
     if (interaction.inCachedGuild()) {
       const settings = await getGuildSettings(interaction.guildId);
-      isStaff = Boolean(
-        (settings.modmail?.staffRoleId && interaction.member.roles.cache.has(settings.modmail.staffRoleId))
-        || (settings.governance?.councilRoleId && interaction.member.roles.cache.has(settings.governance.councilRoleId)),
-      );
+      isStaff = (await isModmailStaffMember(interaction.member, settings.modmail?.staffRoleId))
+        || Boolean(settings.governance?.councilRoleId && interaction.member.roles.cache.has(settings.governance.councilRoleId));
     }
 
     await interaction.update(
