@@ -15,3 +15,6 @@
 ## Compatibility
 - Existing open and closed ticket headers are refreshed on startup so they receive the new controls.
 - Existing modmail data remains compatible; ticket records now also support a `deleted` state and deletion metadata.
+
+- Added `/setup trial-moderator-role role:@Role` so the trial moderator/Dragonseed role is configurable instead of relying on a hard-coded role name.
+- Ticket permissions now check the configured moderator and trial moderator roles: both can handle/reopen tickets, but only the moderator role (or server managers) can permanently delete closed tickets.

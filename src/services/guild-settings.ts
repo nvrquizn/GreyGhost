@@ -439,6 +439,7 @@ export const guildSettingsSchema = z.object({
   statsMessageIds: z.array(z.string()).max(10).optional(),
   chronicleChannelId: z.string().optional(),
   moderatorRoleId: z.string().optional(),
+  trialModeratorRoleId: z.string().optional(),
   dragonGrantChannelId: z.string().optional(),
   championsRoleId: z.string().optional(),
   tourneySummonsRoleId: z.string().optional(),
@@ -583,6 +584,7 @@ export async function clearGuildSetting(
     delete current.statsMessageIds;
     delete current.chronicleChannelId;
     delete current.moderatorRoleId;
+    delete current.trialModeratorRoleId;
     delete current.championsRoleId;
     delete current.tourneySummonsRoleId;
     delete current.eventChannelId;

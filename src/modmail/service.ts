@@ -14,7 +14,7 @@ import {
   type TextChannel,
   type User,
 } from "discord.js";
-import { configuredModeratorRoleId, hasRequiredModeratorRole } from "../moderation/access.js";
+import { configuredModeratorRoleId, configuredTrialModeratorRoleId, hasRequiredModeratorRole, hasRequiredTrialModeratorRole } from "../moderation/access.js";
 import {
   createModmailTicket,
   getGuildSettings,
@@ -43,8 +43,8 @@ export function safeChannelName(username: string): string {
 export async function isModmailStaffMember(member: GuildMember, configuredStaffRoleId?: string): Promise<boolean> {
   if (member.permissions.has(PermissionFlagsBits.ManageGuild)) return true;
   if (configuredStaffRoleId && member.roles.cache.has(configuredStaffRoleId)) return true;
-  if (member.roles.cache.some((role) => role.name.toLowerCase() === "dragonseed")) return true;
-  return hasRequiredModeratorRole(member.guild.id, member);
+  if (await hasRequiredModeratorRole(member.guild.id, member)) return true;
+  return hasRequiredTrialModeratorRole(member.guild.id, member);
 }
 
 function ticketControls(ticket: ModmailTicket): ActionRowBuilder<ButtonBuilder> {
@@ -56,7 +56,7 @@ function ticketControls(ticket: ModmailTicket): ActionRowBuilder<ButtonBuilder> 
         .setStyle(ButtonStyle.Success),
       new ButtonBuilder()
         .setCustomId(`modmail:delete:${ticket.id}`)
-        .setLabel("Delete Ticket · Dragonrider")
+        .setLabel("Delete Ticket · Moderator")
         .setStyle(ButtonStyle.Danger),
     );
   }
@@ -149,7 +149,7 @@ export async function openTicket(
       ...[...new Set([
         config.staffRoleId,
         await configuredModeratorRoleId(guild.id, guild),
-        guild.roles.cache.find((role) => role.name.toLowerCase() === "dragonseed")?.id,
+        await configuredTrialModeratorRoleId(guild.id, guild),
       ].filter((id): id is string => Boolean(id)))].map((id) => ({
         id,
         allow: [

@@ -35,6 +35,7 @@ function settingsSummary(settings: GuildSettings): string {
     `**Reaction logs:** ${settings.reactionLogChannelId ? `<#${settings.reactionLogChannelId}>` : "Not configured"}`,
     `**Chronicles:** ${settings.chronicleChannelId ? `<#${settings.chronicleChannelId}>` : "Not configured"}`,
     `**Moderator role:** ${settings.moderatorRoleId ? `<@&${settings.moderatorRoleId}>` : "Not configured"}`,
+    `**Trial moderator role:** ${settings.trialModeratorRoleId ? `<@&${settings.trialModeratorRoleId}>` : "Not configured"}`,
     `**Dragon grant channel:** ${settings.dragonGrantChannelId ? `<#${settings.dragonGrantChannelId}>` : "Not configured (Grey Ghost will DM recipients)"}`,
     `**Champions role:** ${settings.championsRoleId ? `<@&${settings.championsRoleId}>` : "Not configured"}`,
     `**Tourney Summons:** ${settings.tourneySummonsRoleId ? `<@&${settings.tourneySummonsRoleId}>` : "Not configured"}`,
@@ -202,6 +203,15 @@ export const setupCommand: Command = {
     )
     .addSubcommand((subcommand) =>
       subcommand
+        .setName("trial-moderator-role")
+        .setDescription("Choose the trial moderator role used for limited staff and ticket access.")
+        .addRoleOption((option) => option
+          .setName("role")
+          .setDescription("The trial moderator role, such as Dragonseed.")
+          .setRequired(true)),
+    )
+    .addSubcommand((subcommand) =>
+      subcommand
         .setName("dragon-grants")
         .setDescription("Choose where special dragon grants are announced.")
         .addChannelOption((option) => option
@@ -258,6 +268,7 @@ export const setupCommand: Command = {
               { name: "Reaction logs", value: "reactionLogChannelId" },
               { name: "Chronicles channel", value: "chronicleChannelId" },
               { name: "Moderator role", value: "moderatorRoleId" },
+              { name: "Trial moderator role", value: "trialModeratorRoleId" },
               { name: "Dragon grant channel", value: "dragonGrantChannelId" },
               { name: "Champions role", value: "championsRoleId" },
               { name: "Tourney Summons role", value: "tourneySummonsRoleId" },
@@ -379,6 +390,22 @@ export const setupCommand: Command = {
       const settings = await updateGuildSettings(interaction.guildId, { moderatorRoleId: role.id });
       await interaction.reply({
         content: `${role} is now required for Grey Ghost moderation commands and dragon creation. Members may have only one dragon each.
+
+${settingsSummary(settings)}`,
+        flags: MessageFlags.Ephemeral,
+      });
+      return;
+    }
+
+    if (subcommand === "trial-moderator-role") {
+      const role = interaction.options.getRole("role", true);
+      if (role.id === interaction.guild.roles.everyone.id) {
+        await interaction.reply({ content: "Choose a staff role—not @everyone—as the trial moderator role.", flags: MessageFlags.Ephemeral });
+        return;
+      }
+      const settings = await updateGuildSettings(interaction.guildId, { trialModeratorRoleId: role.id });
+      await interaction.reply({
+        content: `${role} is now Grey Ghost's trial moderator role. Members with it can assist with tickets, but they cannot permanently delete closed tickets.
 
 ${settingsSummary(settings)}`,
         flags: MessageFlags.Ephemeral,

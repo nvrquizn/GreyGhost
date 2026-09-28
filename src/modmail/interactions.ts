@@ -119,7 +119,11 @@ export function registerModmailInteractions(client: Client): void {
       }
       const canDelete = interaction.member.permissions.has("ManageGuild") || await hasRequiredModeratorRole(interaction.guildId, interaction.member);
       if (!canDelete) {
-        await interaction.reply({ content: "Dragonseeds may close and reopen tickets, but only Dragonriders or server managers may permanently delete them.", flags: MessageFlags.Ephemeral });
+        const moderatorRoleId = settings.moderatorRoleId;
+        const trialRoleId = settings.trialModeratorRoleId;
+        const trialLabel = trialRoleId && interaction.member.roles.cache.has(trialRoleId) ? `<@&${trialRoleId}> members` : "Trial moderators";
+        const moderatorLabel = moderatorRoleId ? `<@&${moderatorRoleId}>` : "the configured moderator role";
+        await interaction.reply({ content: `${trialLabel} may close and reopen tickets, but only ${moderatorLabel} or server managers may permanently delete them.`, flags: MessageFlags.Ephemeral });
         return;
       }
       await interaction.reply({ content: `Deleting closed ticket ${ticketLabel(ticket.id)}…`, flags: MessageFlags.Ephemeral });

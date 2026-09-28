@@ -28,11 +28,25 @@ export async function configuredModeratorRoleId(guildId: string, guild?: Guild):
   return guild?.roles.cache.find((role) => role.name.toLowerCase() === "dragonrider")?.id;
 }
 
+export async function configuredTrialModeratorRoleId(guildId: string, guild?: Guild): Promise<string | undefined> {
+  const settings = await getGuildSettings(guildId);
+  if (settings.trialModeratorRoleId) return settings.trialModeratorRoleId;
+  return guild?.roles.cache.find((role) => role.name.toLowerCase() === "dragonseed")?.id;
+}
+
 export async function hasRequiredModeratorRole(
   guildId: string,
   member: GuildMember | PartialGuildMember,
 ): Promise<boolean> {
   const roleId = await configuredModeratorRoleId(guildId, member.guild);
+  return Boolean(roleId && member.roles.cache.has(roleId));
+}
+
+export async function hasRequiredTrialModeratorRole(
+  guildId: string,
+  member: GuildMember | PartialGuildMember,
+): Promise<boolean> {
+  const roleId = await configuredTrialModeratorRoleId(guildId, member.guild);
   return Boolean(roleId && member.roles.cache.has(roleId));
 }
 

@@ -500,9 +500,9 @@ Grey Ghost now records member profile-picture updates in the configured server l
 
 ## v0.29.6 — Ticket Closure Controls
 
-- Closed modmail tickets now switch their header panel to **Reopen Ticket** and **Delete Ticket · Dragonrider** controls.
-- Dragonseeds (Trial Moderators) may view, claim, reply to, close, and reopen tickets.
-- Only Dragonriders (the configured moderator role) or server managers may permanently delete a closed ticket channel.
+- Closed modmail tickets now switch their header panel to **Reopen Ticket** and **Delete Ticket · Moderator** controls.
+- Configure the trial moderator role with `/setup trial-moderator-role role:@Role`. Trial moderators may view, claim, reply to, close, and reopen tickets.
+- Only members with the configured moderator role (set with `/setup moderator-role`) or server managers may permanently delete a closed ticket channel.
 - Reopening restores the normal ticket name, notifies the member, and returns the panel to Claim/Close controls.
 - Deleted ticket channels are marked as deleted in persistent ticket history and cannot be reopened.
 - Ticket deletion is recorded in the configured modmail log channel.

@@ -175,6 +175,18 @@ export async function diagnoseGuildSetup(guild: Guild): Promise<SetupDiagnostics
     }
   }
 
+  if (settings.moderatorRoleId) {
+    const role = guild.roles.cache.get(settings.moderatorRoleId);
+    if (!role) result.errors.push("The configured moderator role was deleted.");
+    else result.passed.push("The moderator role is available.");
+  } else result.warnings.push("The moderator role is not configured.");
+
+  if (settings.trialModeratorRoleId) {
+    const role = guild.roles.cache.get(settings.trialModeratorRoleId);
+    if (!role) result.errors.push("The configured trial moderator role was deleted.");
+    else result.passed.push("The trial moderator role is available.");
+  } else result.warnings.push("The trial moderator role is not configured.");
+
   if (!settings.modmail) {
     result.warnings.push("Modmail is not configured.");
   } else {
