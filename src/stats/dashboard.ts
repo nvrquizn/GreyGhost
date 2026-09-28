@@ -1,6 +1,6 @@
-import { Events, type Client, type Guild } from "discord.js";
+import { Events, type Client, type Guild, type Message } from "discord.js";
 import { getGuildSettings, updateGuildSettings } from "../services/guild-settings.js";
-import { renderServerStats } from "./render-stats.js";
+import { renderServerStatsPages } from "./render-stats.js";
 
 const refreshLocks = new Map<string, Promise<boolean>>();
 
@@ -11,16 +11,39 @@ async function refresh(guild: Guild): Promise<boolean> {
   const channel = await guild.channels.fetch(settings.statsChannelId).catch(() => null);
   if (!channel?.isTextBased() || !("messages" in channel)) return false;
 
-  const embed = await renderServerStats(guild);
-  const currentMessage = settings.statsMessageId
-    ? await channel.messages.fetch(settings.statsMessageId).catch(() => null)
-    : null;
-  const message = currentMessage
-    ? await currentMessage.edit({ embeds: [embed] })
-    : await channel.send({ embeds: [embed] });
+  const pages = await renderServerStatsPages(guild);
+  const configuredIds = settings.statsMessageIds?.length
+    ? settings.statsMessageIds
+    : settings.statsMessageId
+      ? [settings.statsMessageId]
+      : [];
+  const existing = await Promise.all(
+    configuredIds.map((id) => channel.messages.fetch(id).catch(() => null)),
+  );
+  const pageMessages: Message[] = [];
 
-  if (message.id !== settings.statsMessageId) {
-    await updateGuildSettings(guild.id, { statsChannelId: channel.id, statsMessageId: message.id });
+  for (let index = 0; index < pages.length; index += 1) {
+    const page = pages[index];
+    if (!page) continue;
+    const current = existing[index];
+    const message = current
+      ? await current.edit({ embeds: [page] })
+      : await channel.send({ embeds: [page] });
+    pageMessages.push(message);
+  }
+
+  for (const extra of existing.slice(pages.length)) {
+    if (extra) await extra.delete().catch(() => undefined);
+  }
+
+  const ids = pageMessages.map((message) => message.id);
+  const idsChanged = ids.length !== configuredIds.length || ids.some((id, index) => id !== configuredIds[index]);
+  if (idsChanged || settings.statsMessageId !== ids[0]) {
+    await updateGuildSettings(guild.id, {
+      statsChannelId: channel.id,
+      statsMessageId: ids[0],
+      statsMessageIds: ids,
+    });
   }
   return true;
 }

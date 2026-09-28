@@ -7,7 +7,7 @@ import {
 import type { Command } from "../types/command.js";
 import { getGuildSettings, updateGuildSettings } from "../services/guild-settings.js";
 import { refreshStatsDashboard } from "../stats/dashboard.js";
-import { renderServerStats } from "../stats/render-stats.js";
+import { renderServerStatsPages } from "../stats/render-stats.js";
 
 function canManageServer(interaction: {
   memberPermissions: { has(permission: bigint): boolean } | null;
@@ -45,8 +45,16 @@ export const statsCommand: Command = {
 
     if (subcommand === "view") {
       await interaction.deferReply();
-      const embed = await renderServerStats(interaction.guild);
-      await interaction.editReply({ embeds: [embed] });
+      const pages = await renderServerStatsPages(interaction.guild);
+      const firstPage = pages[0];
+      if (!firstPage) {
+        await interaction.editReply("No Realm statistics are available yet.");
+        return;
+      }
+      await interaction.editReply({ embeds: [firstPage] });
+      for (const page of pages.slice(1)) {
+        await interaction.followUp({ embeds: [page] });
+      }
       return;
     }
 
@@ -66,6 +74,7 @@ export const statsCommand: Command = {
       await updateGuildSettings(interaction.guildId, {
         statsChannelId: channel.id,
         statsMessageId: current.statsChannelId === channel.id ? current.statsMessageId : undefined,
+        statsMessageIds: current.statsChannelId === channel.id ? current.statsMessageIds : undefined,
       });
       await refreshStatsDashboard(interaction.guild);
       await interaction.editReply(

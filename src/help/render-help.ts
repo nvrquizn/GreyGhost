@@ -3,7 +3,20 @@ import { EmbedBuilder, PermissionFlagsBits, type GuildMember } from "discord.js"
 const line = (name: string, description: string): string => `\`/${name}\` · \`?${name}\` — ${description}`;
 const slashLine = (name: string, description: string): string => `\`/${name}\` — ${description}`;
 
-export function renderHelp(member: GuildMember | null, isModmailStaff = false): EmbedBuilder {
+type HelpSection = {
+  title: string;
+  lines: string[];
+};
+
+function sectionEmbed(section: HelpSection, page: number, total: number): EmbedBuilder {
+  return new EmbedBuilder()
+    .setColor(0xb8c2cc)
+    .setTitle(`Grey Ghost · Command Roster · ${section.title}`)
+    .setDescription(section.lines.join("\n"))
+    .setFooter({ text: `Version 0.29.3 · Page ${page}/${total} · Slash and ? prefix commands` });
+}
+
+export function renderHelpPages(member: GuildMember | null, isModmailStaff = false): EmbedBuilder[] {
   const permissions = member?.permissions;
   const manager = permissions?.has(PermissionFlagsBits.ManageGuild) ?? false;
   const roleManager = manager || (permissions?.has(PermissionFlagsBits.ManageRoles) ?? false);
@@ -14,81 +27,91 @@ export function renderHelp(member: GuildMember | null, isModmailStaff = false): 
   const canBan = manager || (permissions?.has(PermissionFlagsBits.BanMembers) ?? false);
   const canManageChannels = manager || (permissions?.has(PermissionFlagsBits.ManageChannels) ?? false);
 
-  const embed = new EmbedBuilder()
-    .setColor(0xb8c2cc)
-    .setTitle("Grey Ghost · Command Roster")
-    .setDescription("Every command may be invoked with either `/` or `?`. Put text containing spaces inside quotation marks.")
-    .addFields(
-      {
-        name: "General",
-        value: [
-          line("help", "Show the commands available to you."),
-          line("ping", "Check whether Grey Ghost is awake."),
-          line("about", "Learn about Grey Ghost."),
-          line("remindme", "Set, list, or cancel personal reminders."),
-          line("cooldowns", "View every personal cooldown and what is ready now."),
-          line("userinfo", "View information about a server member."),
-          line("serverinfo", "View information about this server."),
-          line("rolemembers", "List members who have a selected role."),
-          line("whohas", "Find members with a selected permission."),
-          line("spoiler", "Post concealed spoiler text."),
-          line("petition submit", "Submit an idea for a public Realm vote."),
-          slashLine("staffapply", "Open the private staff application form."),
-        ].join("\n"),
-      },
-      {
-        name: "Realm & Community",
-        value: [
-          line("profile", "View or edit profiles and wishlists."),
-          line("collection progress", "Check collection-title progress."),
-          line("stats view", "View Realm statistics."),
-          line("housepoints standings", "View House standings and history."),
-          line("lore", "Browse the ASOIAF directory."),
-          line("joust", "Enter, withdraw from, or inspect a joust."),
-          line("chronicle view", "Read the Realm's permanent history."),
-          line("season status", "View the active House season and its standings."),
-          line("season history", "Review completed House seasons and winners."),
-          line("housequest list", "View active and recent House quests."),
-          line("achievements view", "View a member's earned achievements."),
-          line("dragon", "View the Dragon Registry or care for a bonded staff dragon."),
-          line("trade", "Trade coins and eligible inventory items with another character."),
-          line("duel", "Challenge another character; up to five completed duels per week."),
-          line("renown", "View permanent Realm Renown and standings."),
-          line("heirloom", "View named weapons and heirlooms."),
-          line("prize", "Claim pending Admirer-role event prizes."),
-          line("race", "Enter or inspect a horse race."),
-          line("hunt", "Go hunting for coin, Renown, and horse experience."),
-          line("tavern", "Play no-wager tavern mini-games for small fixed prizes."),
-          line("festival", "Join seasonal festivals, complete objectives, and spend festival tokens."),
-        ].join("\n"),
-      },
-      {
-        name: "Progression & Equipment",
-        value: [
-          line("character", "Create, view, or rename a Realm character."),
-          line("daily", "Claim daily coin or train Health, Damage, or Resistance."),
-          line("coin", "Check your coin purse and transaction history."),
-          line("shop", "Browse mounts and armour for sale."),
-          line("buy", "Purchase equipment with coin."),
-          line("inventory", "View all equipment you own."),
-          line("stable", "View, customize, and train your owned horses."),
-          line("armoury", "View your owned armour."),
-          line("loadout", "Equip and inspect your mount and armour."),
-        ].join("\n"),
-      },
-    );
+  const sections: HelpSection[] = [
+    {
+      title: "General",
+      lines: [
+        "Every command may be invoked with either `/` or `?`. Put text containing spaces inside quotation marks.",
+        "",
+        line("help", "Show the commands available to you."),
+        line("ping", "Check whether Grey Ghost is awake."),
+        line("about", "Learn about Grey Ghost."),
+        line("remindme", "Set, list, or cancel personal reminders."),
+        line("cooldowns", "View every personal cooldown and what is ready now."),
+        line("userinfo", "View information about a server member."),
+        line("serverinfo", "View information about this server."),
+        line("rolemembers", "List members who have a selected role."),
+        line("whohas", "Find members with a selected permission."),
+        line("spoiler", "Post concealed spoiler text."),
+        line("petition submit", "Submit an idea for a public Realm vote."),
+        slashLine("staffapply", "Open the private staff application form."),
+      ],
+    },
+    {
+      title: "Realm & Community",
+      lines: [
+        line("profile", "View or edit profiles and wishlists."),
+        line("collection progress", "Check collection-title progress."),
+        line("stats view", "View Realm statistics."),
+        line("housepoints standings", "View House standings and history."),
+        line("lore", "Browse the ASOIAF directory."),
+        line("chronicle view", "Read the Realm's permanent history."),
+        line("season status", "View the active House season and its standings."),
+        line("season history", "Review completed House seasons and winners."),
+        line("housequest list", "View active and recent House quests."),
+        line("housechronicle view", "Read a House's permanent chronicle."),
+        line("achievements view", "View a member's earned achievements."),
+        line("renown", "View permanent Realm Renown and standings."),
+        line("heirloom", "View named weapons and heirlooms."),
+        line("prize", "Claim pending Admirer-role event prizes."),
+      ],
+    },
+    {
+      title: "Activities & Competition",
+      lines: [
+        line("joust", "Enter, withdraw from, or inspect a joust."),
+        line("melee", "Enter or inspect a grand melee."),
+        line("race", "Enter or inspect a horse race."),
+        line("hunt", "Go hunting for coin, Renown, and horse experience."),
+        line("tavern", "Play no-wager tavern mini-games for small fixed prizes."),
+        line("festival", "Join seasonal festivals, complete objectives, and spend festival tokens."),
+        line("expedition", "Join and continue Realm expeditions."),
+        line("duel", "Challenge another character; up to five completed duels per week."),
+        line("trade", "Trade coins and eligible inventory items with another character."),
+        line("dragon", "View the Dragon Registry or care for a bonded dragon."),
+      ],
+    },
+    {
+      title: "Progression & Equipment",
+      lines: [
+        line("character", "Create, view, or rename a Realm character."),
+        line("daily", "Claim daily coin or train Health, Damage, or Resistance."),
+        line("coin", "Check your coin purse and transaction history."),
+        line("shop", "Browse mounts and armour for sale."),
+        line("buy", "Purchase equipment with coin."),
+        line("inventory", "View all equipment you own."),
+        line("stable", "View, customize, and train your owned horses."),
+        line("armoury", "View your owned armour."),
+        line("loadout", "Equip and inspect your mount and armour."),
+        line("recovery", "Check injuries or use bandages."),
+        line("spoils", "Inspect or resolve eligible competitive-joust spoils."),
+      ],
+    },
+  ];
 
-  if (eventManager) embed.addFields({
-    name: "Events",
-    value: [
-      line("event", "Create and manage events with RSVP tracking."),
-      line("quiz", "Create and host live quizzes."),
-      line("joust", "Create, publish, and run jousting tournaments."),
-      line("melee", "Create, publish, and run grand melees."),
-      line("race", "Create, publish, and run horse races."),
-      line("festival", "Create, publish, and conclude seasonal festivals."),
-    ].join("\n"),
-  });
+  if (eventManager) {
+    sections.push({
+      title: "Event Hosting",
+      lines: [
+        line("event", "Create and manage events with RSVP tracking."),
+        line("quiz", "Create and host live quizzes."),
+        line("joust", "Create, publish, and run jousting tournaments."),
+        line("melee", "Create, publish, and run grand melees."),
+        line("race", "Create, publish, and run horse races."),
+        line("festival", "Create, publish, and conclude seasonal festivals."),
+      ],
+    });
+  }
 
   const staffTools: string[] = [];
   if (manager) staffTools.push(
@@ -102,16 +125,15 @@ export function renderHelp(member: GuildMember | null, isModmailStaff = false): 
     line("chronicle record", "Write a major event into the Chronicles."),
     line("season", "Start or end House Point seasons."),
     line("housequest", "Create, progress, or cancel House quests."),
+    line("housechronicle add", "Add a special entry to a House Chronicle."),
     line("achievements", "Grant or revoke special achievements."),
   );
   if (roleManager) staffTools.push(
     line("selfroles", "Configure and publish self-role panels."),
     line("collection", "Configure and synchronize collection titles."),
   );
-  if (messageManager) staffTools.push(
-    line("embed", "Publish a formatted information embed."),
-  );
-  if (staffTools.length) embed.addFields({ name: "Staff Tools", value: staffTools.join("\n").slice(0, 1024) });
+  if (messageManager) staffTools.push(line("embed", "Publish a formatted information embed."));
+  if (staffTools.length) sections.push({ title: "Staff Tools", lines: staffTools });
 
   const moderation: string[] = [];
   if (canModerate) moderation.push(
@@ -122,10 +144,7 @@ export function renderHelp(member: GuildMember | null, isModmailStaff = false): 
     line("moderation", "Inspect, edit, void, and annotate cases."),
   );
   if (canKick) moderation.push(line("kick", "Remove a member from the server."));
-  if (canBan) moderation.push(
-    line("ban", "Ban a user."),
-    line("unban", "Remove a ban by user ID."),
-  );
+  if (canBan) moderation.push(line("ban", "Ban a user."), line("unban", "Remove a ban by user ID."));
   if (messageManager) moderation.push(line("purge", "Bulk-delete recent messages."));
   if (canManageChannels) moderation.push(
     line("slowmode", "Change the current channel's slowmode."),
@@ -134,13 +153,16 @@ export function renderHelp(member: GuildMember | null, isModmailStaff = false): 
   );
   if (isModmailStaff || manager) moderation.push(line("modmail", "Manage the current private ticket."));
   if (isModmailStaff || manager) moderation.push(line("council propose", "Submit a private council proposal."));
-  if (moderation.length) {
-    embed.addFields({ name: "Moderation", value: moderation.slice(0, 7).join("\n") });
-    if (moderation.length > 7) {
-      embed.addFields({ name: "Moderation · Continued", value: moderation.slice(7).join("\n") });
-    }
-  }
+  if (moderation.length) sections.push({ title: "Moderation", lines: moderation });
 
-  return embed
-    .setFooter({ text: "Version 0.29.2 · Slash and ? prefix commands" });
+  return sections.map((section, index) => sectionEmbed(section, index + 1, sections.length));
+}
+
+/** Backward-compatible first-page renderer for any older internal callers. */
+export function renderHelp(member: GuildMember | null, isModmailStaff = false): EmbedBuilder {
+  const firstPage = renderHelpPages(member, isModmailStaff)[0];
+  if (!firstPage) {
+    throw new Error("Grey Ghost could not render the command roster.");
+  }
+  return firstPage;
 }

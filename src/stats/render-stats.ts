@@ -5,24 +5,6 @@ import { getGuildSuggestions } from "../services/suggestions.js";
 import { selfRolePanelDefinitions } from "../selfroles/panels.js";
 import { getHouseStandings, standingsLines } from "../housepoints/standings.js";
 
-function chunkLines(lines: string[], maximumLength = 1024): string[] {
-  const chunks: string[] = [];
-  let current = "";
-
-  for (const line of lines) {
-    const candidate = current ? `${current}\n${line}` : line;
-    if (candidate.length <= maximumLength) {
-      current = candidate;
-      continue;
-    }
-    if (current) chunks.push(current);
-    current = line;
-  }
-
-  if (current) chunks.push(current);
-  return chunks;
-}
-
 function plural(count: number, singular: string, pluralForm = `${singular}s`): string {
   return `${count} ${count === 1 ? singular : pluralForm}`;
 }
@@ -49,7 +31,20 @@ function rankingText(entries: Array<{ id: string; count: number }>, empty: strin
     : empty;
 }
 
-export async function renderServerStats(guild: Guild): Promise<EmbedBuilder> {
+function pageBase(guild: Guild, subtitle: string): EmbedBuilder {
+  return new EmbedBuilder()
+    .setColor(0x87ceeb)
+    .setTitle(`${guild.name} · Realm Statistics · ${subtitle}`)
+    .setThumbnail(guild.iconURL());
+}
+
+function finishPage(embed: EmbedBuilder, page: number, total: number): EmbedBuilder {
+  return embed
+    .setFooter({ text: `Page ${page}/${total} · Automatically refreshed every 15 minutes` })
+    .setTimestamp();
+}
+
+export async function renderServerStatsPages(guild: Guild): Promise<EmbedBuilder[]> {
   const members = await guild.members.fetch();
   const [settings, suggestions, configuredAdmirerRoleIds, houseStandings] = await Promise.all([
     getGuildSettings(guild.id),
@@ -82,11 +77,18 @@ export async function renderServerStats(guild: Guild): Promise<EmbedBuilder> {
     }
   }
 
-  const embed = new EmbedBuilder()
-    .setColor(0x87ceeb)
-    .setTitle(`${guild.name} · Realm Statistics`)
-    .setThumbnail(guild.iconURL())
-    .addFields(
+  const statuses = {
+    pending: suggestions.filter((suggestion) => suggestion.status === "pending").length,
+    considering: suggestions.filter((suggestion) => suggestion.status === "considering").length,
+    accepted: suggestions.filter((suggestion) => suggestion.status === "accepted").length,
+    denied: suggestions.filter((suggestion) => suggestion.status === "denied").length,
+    implemented: suggestions.filter((suggestion) => suggestion.status === "implemented").length,
+  };
+
+  const pages: EmbedBuilder[] = [];
+
+  pages.push(
+    pageBase(guild, "Overview").addFields(
       {
         name: "The Realm",
         value: [
@@ -110,16 +112,25 @@ export async function renderServerStats(guild: Guild): Promise<EmbedBuilder> {
         ].join("\n"),
         inline: true,
       },
-    );
+      {
+        name: "Petitions",
+        value: [
+          `**Submitted:** ${plural(suggestions.length, "petition")}`,
+          `**Pending:** ${statuses.pending}`,
+          `**Considering:** ${statuses.considering}`,
+          `**Accepted:** ${statuses.accepted}`,
+          `**Denied:** ${statuses.denied}`,
+          `**Implemented:** ${statuses.implemented}`,
+        ].join("\n"),
+      },
+    ),
+  );
 
-  if (houseStandings.length) {
-    for (const [index, value] of chunkLines(standingsLines(houseStandings)).entries()) {
-      embed.addFields({
-        name: index === 0 ? "House Point Standings" : "House Point Standings · Continued",
-        value,
-      });
-    }
-  }
+  pages.push(
+    pageBase(guild, "House Point Standings").setDescription(
+      houseStandings.length ? standingsLines(houseStandings).join("\n") : "No House standings are available yet.",
+    ),
+  );
 
   for (const panelId of ["houses", "dance"] as const) {
     const panel = settings.selfRolePanels?.[panelId];
@@ -132,47 +143,34 @@ export async function renderServerStats(guild: Guild): Promise<EmbedBuilder> {
         return `${entry.emoji ?? "•"} ${role} — **${count}**`;
       })
       .filter((line): line is string => Boolean(line));
-    if (lines.length) {
-      const title = selfRolePanelDefinitions[panelId].title;
-      for (const [index, value] of chunkLines(lines).entries()) {
-        embed.addFields({ name: index === 0 ? title : `${title} · Continued`, value });
-      }
-    }
+    if (!lines.length) continue;
+
+    pages.push(
+      pageBase(guild, selfRolePanelDefinitions[panelId].title).setDescription(lines.join("\n")),
+    );
   }
 
-  embed.addFields(
-    {
-      name: "Most Collected Admirer Roles",
-      value: rankingText(topAdmirers, "No admirer roles have been collected yet."),
-      inline: true,
-    },
-    {
-      name: "Most Earned Titles",
-      value: rankingText(topTitles, "No Titles of the Realm have been earned yet."),
-      inline: true,
-    },
+  pages.push(
+    pageBase(guild, "Collections & Records").addFields(
+      {
+        name: "Most Collected Admirer Roles",
+        value: rankingText(topAdmirers, "No admirer roles have been collected yet."),
+      },
+      {
+        name: "Most Earned Titles",
+        value: rankingText(topTitles, "No Titles of the Realm have been earned yet."),
+      },
+    ),
   );
 
-  const statuses = {
-    pending: suggestions.filter((suggestion) => suggestion.status === "pending").length,
-    considering: suggestions.filter((suggestion) => suggestion.status === "considering").length,
-    accepted: suggestions.filter((suggestion) => suggestion.status === "accepted").length,
-    denied: suggestions.filter((suggestion) => suggestion.status === "denied").length,
-    implemented: suggestions.filter((suggestion) => suggestion.status === "implemented").length,
-  };
-  embed.addFields({
-    name: "Petitions",
-    value: [
-      `**Submitted:** ${plural(suggestions.length, "petition")}`,
-      `**Pending:** ${statuses.pending}`,
-      `**Considering:** ${statuses.considering}`,
-      `**Accepted:** ${statuses.accepted}`,
-      `**Denied:** ${statuses.denied}`,
-      `**Implemented:** ${statuses.implemented}`,
-    ].join("\n"),
-  });
+  return pages.map((embed, index) => finishPage(embed, index + 1, pages.length));
+}
 
-  return embed
-    .setFooter({ text: "Automatically refreshed every 15 minutes" })
-    .setTimestamp();
+/** Backward-compatible first page for older internal callers. */
+export async function renderServerStats(guild: Guild): Promise<EmbedBuilder> {
+  const firstPage = (await renderServerStatsPages(guild))[0];
+  if (!firstPage) {
+    throw new Error("Grey Ghost could not render Realm statistics.");
+  }
+  return firstPage;
 }

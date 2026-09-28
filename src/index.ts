@@ -28,6 +28,7 @@ import { registerGovernanceInteractions } from "./governance/runtime.js";
 import { registerEventManagerInteractions } from "./events-manager/runtime.js";
 import { registerChronicleRuntime } from "./chronicles/runtime.js";
 import { registerDragonRuntime } from "./dragons/runtime.js";
+import { registerHelpInteractions } from "./help/runtime.js";
 import { MODERATION_COMMAND_NAMES, hasRequiredModeratorRole, moderatorRoleRequirementText } from "./moderation/access.js";
 
 const client = new Client({
@@ -62,6 +63,7 @@ registerGovernanceInteractions(client);
 registerEventManagerInteractions(client);
 registerChronicleRuntime(client);
 registerDragonRuntime(client);
+registerHelpInteractions(client);
 
 client.once(Events.ClientReady, (readyClient) => {
   readyClient.user.setActivity("the mists of Dragonstone", {

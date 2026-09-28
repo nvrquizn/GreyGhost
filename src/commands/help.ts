@@ -1,7 +1,7 @@
 import { MessageFlags, SlashCommandBuilder } from "discord.js";
 import type { Command } from "../types/command.js";
 import { getGuildSettings } from "../services/guild-settings.js";
-import { renderHelp } from "../help/render-help.js";
+import { helpPagePayload } from "../help/pagination.js";
 
 export const helpCommand: Command = {
   data: new SlashCommandBuilder()
@@ -10,7 +10,7 @@ export const helpCommand: Command = {
 
   async execute(interaction) {
     if (!interaction.inCachedGuild()) {
-      await interaction.reply({ embeds: [renderHelp(null)] });
+      await interaction.reply(helpPagePayload(null, false, interaction.user.id));
       return;
     }
     const settings = await getGuildSettings(interaction.guildId);
@@ -18,6 +18,9 @@ export const helpCommand: Command = {
       (settings.modmail?.staffRoleId && interaction.member.roles.cache.has(settings.modmail.staffRoleId))
       || (settings.governance?.councilRoleId && interaction.member.roles.cache.has(settings.governance.councilRoleId)),
     );
-    await interaction.reply({ embeds: [renderHelp(interaction.member, isStaff)], flags: MessageFlags.Ephemeral });
+    await interaction.reply({
+      ...helpPagePayload(interaction.member, isStaff, interaction.user.id),
+      flags: MessageFlags.Ephemeral,
+    });
   },
 };

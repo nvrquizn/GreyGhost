@@ -479,3 +479,12 @@ Grey Ghost can now include a configured Discord attachment/CDN or Tenor GIF URL 
 - Shows per-horse stable training availability.
 - Shows bonded-dragon feeding and daily activity availability.
 - Available actions display **Ready**; active cooldowns display Discord relative timestamps.
+
+
+## v0.29.3 — Paginated Help & Realm Statistics
+
+- `/help` and `?help` now use Previous/Next page controls instead of one increasingly large command embed. The controls only respond to the member who opened the roster.
+- `/stats view` and `?stats view` split Realm statistics into dedicated Overview, House Point Standings, allegiance, and Collections & Records pages and send all pages separately.
+- Published statistics dashboards also use separate messages for every page and refresh all of them automatically every 15 minutes.
+- Existing one-message dashboards migrate automatically on refresh.
+- This also fixes the help roster crash caused by Discord's 1,024-character embed-field limit.
