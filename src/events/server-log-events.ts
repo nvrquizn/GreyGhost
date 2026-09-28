@@ -8,8 +8,11 @@ import {
   type Client,
   type Guild,
   type GuildChannel,
+  type GuildMember,
   type Message,
   type PartialMessage,
+  type PartialGuildMember,
+  type PartialUser,
   type PermissionOverwrites,
   type Role,
   type ThreadChannel,
@@ -439,7 +442,68 @@ async function logRoleUpdate(oldRole: Role, newRole: Role): Promise<void> {
   await sendLog(newRole.guild, embed);
 }
 
+
+async function logGlobalAvatarUpdate(client: Client, oldUser: User | PartialUser, newUser: User | PartialUser): Promise<void> {
+  if (oldUser.avatar === newUser.avatar) return;
+
+  const before = oldUser.displayAvatarURL({ size: 1024 });
+  const after = newUser.displayAvatarURL({ size: 1024 });
+
+  for (const guild of client.guilds.cache.values()) {
+    const member = guild.members.cache.get(newUser.id)
+      ?? await guild.members.fetch(newUser.id).catch(() => null);
+    if (!member) continue;
+
+    const embed = new EmbedBuilder()
+      .setColor(0x738adb)
+      .setTitle("Profile picture updated")
+      .setDescription(`${newUser} changed their Discord profile picture.`)
+      .addFields(
+        { name: "Member", value: `${newUser}\n\`${newUser.id}\``, inline: true },
+        { name: "Before", value: `[Open old picture](${before})`, inline: true },
+        { name: "After", value: `[Open new picture](${after})`, inline: true },
+      )
+      .setThumbnail(before)
+      .setImage(after)
+      .setTimestamp();
+
+    await sendLog(guild, embed);
+  }
+}
+
+async function logGuildAvatarUpdate(oldMember: GuildMember | PartialGuildMember, newMember: GuildMember | PartialGuildMember): Promise<void> {
+  if (oldMember.avatar === newMember.avatar) return;
+
+  const before = oldMember.displayAvatarURL({ size: 1024 });
+  const after = newMember.displayAvatarURL({ size: 1024 });
+  const user = newMember.user;
+
+  const embed = new EmbedBuilder()
+    .setColor(0x738adb)
+    .setTitle("Server profile picture updated")
+    .setDescription(`${newMember} changed their server-specific profile picture.`)
+    .addFields(
+      { name: "Member", value: `${newMember}\n\`${user.id}\``, inline: true },
+      { name: "Before", value: `[Open old picture](${before})`, inline: true },
+      { name: "After", value: `[Open new picture](${after})`, inline: true },
+    )
+    .setThumbnail(before)
+    .setImage(after)
+    .setTimestamp();
+
+  await sendLog(newMember.guild, embed);
+}
+
 export function registerServerLogEvents(client: Client): void {
+
+  client.on(Events.UserUpdate, (oldUser, newUser) => {
+    void logGlobalAvatarUpdate(client, oldUser, newUser).catch((error) => console.error("Could not log a profile picture update:", error));
+  });
+
+  client.on(Events.GuildMemberUpdate, (oldMember, newMember) => {
+    void logGuildAvatarUpdate(oldMember, newMember).catch((error) => console.error("Could not log a server profile picture update:", error));
+  });
+
   client.on(Events.MessageCreate, (message) => {
     rememberMessage(message);
   });

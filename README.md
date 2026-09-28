@@ -492,3 +492,8 @@ Grey Ghost can now include a configured Discord attachment/CDN or Tenor GIF URL 
 ## v0.29.4 — Moderation & Case Management
 
 Grey Ghost's moderation suite now includes direct warning history, case lookup, complete user modlogs, private staff notes, softbans, optional rule references, and attachable case evidence. Every moderation action continues to use the permanent numbered case system, while private notes remain non-punitive and invisible to the affected member.
+
+
+## v0.29.5 — Profile Picture Logging
+
+Grey Ghost now records member profile-picture updates in the configured server log channel. Both ordinary Discord avatar changes and server-specific profile-picture changes are supported, with before/after links and image previews included in the log embed.

@@ -13,7 +13,7 @@ function sectionEmbed(section: HelpSection, page: number, total: number): EmbedB
     .setColor(0xb8c2cc)
     .setTitle(`Grey Ghost · Command Roster · ${section.title}`)
     .setDescription(section.lines.join("\n"))
-    .setFooter({ text: `Version 0.29.4 · Page ${page}/${total} · Slash and ? prefix commands` });
+    .setFooter({ text: `Version 0.29.5 · Page ${page}/${total} · Slash and ? prefix commands` });
 }
 
 export function renderHelpPages(member: GuildMember | null, isModmailStaff = false): EmbedBuilder[] {

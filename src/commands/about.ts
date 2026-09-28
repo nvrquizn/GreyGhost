@@ -14,7 +14,7 @@ export const aboutCommand: Command = {
         "A quiet dragon with a rather noisy list of responsibilities. Grey Ghost is the server's custom guide, steward, herald, and keeper of the peace.",
       )
       .addFields(
-        { name: "Current build", value: "**v0.29.4** · Expanded moderation cases, softbans, warnings, modlogs, staff notes, evidence, paginated help, and Realm statistics" },
+        { name: "Current build", value: "**v0.29.5** · Profile-picture update logging, expanded moderation cases, paginated help, and Realm statistics" },
         { name: "Duties", value: "Onboarding, events, petitions, council proposals, staff applications, Chronicles, House seasons and quests, achievements, reminders, member and server information, role and permission lookups, spoilers, invite tracking, self roles, profiles, collections, House Points, lore, quizzes, jousts, duels, horse races, hunts, expanded stables, tavern games, Renown, heirlooms, dragons and lairs, player trading, modmail, moderation, ghost-ping detection, separate reaction and server audit logs, statistics, and server records." },
         { name: "Command styles", value: "Use either Discord slash commands or the `?` prefix. Try `/help` or `?help` for your role-aware command list." },
       )
