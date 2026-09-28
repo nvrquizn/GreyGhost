@@ -132,7 +132,7 @@ export async function renderServerStatsPages(guild: Guild): Promise<EmbedBuilder
     ),
   );
 
-  for (const panelId of ["houses", "dance"] as const) {
+  for (const panelId of ["houses", "dance", "blackfyre", "trialseven", "fossoway"] as const) {
     const panel = settings.selfRolePanels?.[panelId];
     if (!panel?.roles.length) continue;
     const lines = panel.roles

@@ -14,6 +14,16 @@ export const selfRolePanelDefinitions = {
     description: "Choose the red dragon or the black dragon.",
     mode: "single",
   },
+  trialseven: {
+    title: "The Trial of Seven",
+    description: "Choose Aerion's Champions or Dunk's Champions.",
+    mode: "single",
+  },
+  fossoway: {
+    title: "The Fossoway Apples",
+    description: "Choose the Red Apples of Cider Hall or the Green Apples of New Barrel.",
+    mode: "single",
+  },
   religion: {
     title: "Religion",
     description: "Choose the faith you follow.",

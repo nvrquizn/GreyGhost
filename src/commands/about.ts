@@ -14,7 +14,7 @@ export const aboutCommand: Command = {
         "A quiet dragon with a rather noisy list of responsibilities. Grey Ghost is the server's custom guide, steward, herald, and keeper of the peace.",
       )
       .addFields(
-        { name: "Current build", value: "**v0.29.6** · Ticket close/reopen controls, Dragonseed ticket access, Dragonrider-only deletion, and profile-picture logging" },
+        { name: "Current build", value: "**v0.29.7** · Trial of Seven and Fossoway allegiance panels, plus dedicated allegiance statistics" },
         { name: "Duties", value: "Onboarding, events, petitions, council proposals, staff applications, Chronicles, House seasons and quests, achievements, reminders, member and server information, role and permission lookups, spoilers, invite tracking, self roles, profiles, collections, House Points, lore, quizzes, jousts, duels, horse races, hunts, expanded stables, tavern games, Renown, heirlooms, dragons and lairs, player trading, modmail, moderation, ghost-ping detection, separate reaction and server audit logs, statistics, and server records." },
         { name: "Command styles", value: "Use either Discord slash commands or the `?` prefix. Try `/help` or `?help` for your role-aware command list." },
       )

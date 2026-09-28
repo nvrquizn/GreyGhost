@@ -122,11 +122,12 @@ after posting the covered version, provided it can manage that message.
 
 ## Self-role panels
 
-Grey Ghost includes House Allegiance, the Dance, the Blackfyre Rebellion,
-religion, factions, and pronoun panels. House, faction, and pronoun panels allow
-multiple roles. Dance, Blackfyre, and religion panels keep at most one role at
-a time. The Kingdoms panel allows one regional role, while the Ping Roles panel
-allows any number of notification roles. Published panels can recover their
+Grey Ghost includes House Allegiance, the Dance, the Blackfyre Rebellion, the
+Trial of Seven, the Fossoway Apples, religion, factions, and pronoun panels.
+House, faction, and pronoun panels allow multiple roles. Dance, Blackfyre, Trial
+of Seven, Fossoway Apples, and religion panels keep at most one role at a time.
+The Kingdoms panel allows one regional role, while the Ping Roles panel allows
+any number of notification roles. Published panels can recover their
 configuration from their Discord buttons if the local data file is missing
 after an update, so existing role buttons continue working.
 
@@ -498,7 +499,7 @@ Grey Ghost's moderation suite now includes direct warning history, case lookup, 
 
 Grey Ghost now records member profile-picture updates in the configured server log channel. Both ordinary Discord avatar changes and server-specific profile-picture changes are supported, with before/after links and image previews included in the log embed.
 
-## v0.29.6 — Ticket Closure Controls
+## v0.29.7 — Ticket Closure Controls
 
 - Closed modmail tickets now switch their header panel to **Reopen Ticket** and **Delete Ticket · Moderator** controls.
 - Configure the trial moderator role with `/setup trial-moderator-role role:@Role`. Trial moderators may view, claim, reply to, close, and reopen tickets.
@@ -507,3 +508,12 @@ Grey Ghost now records member profile-picture updates in the configured server l
 - Deleted ticket channels are marked as deleted in persistent ticket history and cannot be reopened.
 - Ticket deletion is recorded in the configured modmail log channel.
 
+
+
+## v0.29.7 — New allegiances
+
+- Adds a **Trial of Seven** self-role panel for **Aerion's Champions** and **Dunk's Champions**.
+- Adds a **Fossoway Apples** self-role panel for the **Red Apples of Cider Hall** and **Green Apples of New Barrel**.
+- Both new allegiance panels are single-choice, so choosing one side removes the other configured side automatically.
+- Realm statistics include configured Trial of Seven and Fossoway allegiance counts on their own pages.
+- Realm profiles automatically display either allegiance when a member has one of the configured roles.
