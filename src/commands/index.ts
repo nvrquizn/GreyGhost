@@ -15,6 +15,7 @@ import { directoryCommand } from "./directory.js";
 import { modmailCommand } from "./modmail.js";
 import {
   banCommand,
+  softbanCommand,
   kickCommand,
   timeoutCommand,
   strikeCommand,
@@ -23,6 +24,7 @@ import {
   warnCommand,
 } from "./moderation-actions.js";
 import { moderationCommand } from "./moderation.js";
+import { caseCommand, modlogsCommand, noteCommand, notesCommand, warningsCommand } from "./moderation-records.js";
 import { lockCommand, purgeCommand, slowmodeCommand, unlockCommand } from "./channel-moderation.js";
 import { quizCommand } from "./quiz.js";
 import { joustCommand } from "./joust.js";
@@ -91,7 +93,13 @@ export const commands: Command[] = [
   untimeoutCommand,
   kickCommand,
   banCommand,
+  softbanCommand,
   unbanCommand,
+  warningsCommand,
+  caseCommand,
+  modlogsCommand,
+  noteCommand,
+  notesCommand,
   moderationCommand,
   purgeCommand,
   slowmodeCommand,

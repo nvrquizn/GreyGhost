@@ -39,7 +39,8 @@ export const warnCommand: Command = {
     .setDefaultMemberPermissions(PermissionFlagsBits.ModerateMembers)
     .addUserOption((option) => option.setName("member").setDescription("The member to warn.").setRequired(true))
     .addStringOption((option) => option.setName("reason").setDescription("Why the warning is being issued.").setMaxLength(400).setRequired(true))
-    .addAttachmentOption((option) => option.setName("evidence").setDescription("Optional supporting evidence.")),
+    .addAttachmentOption((option) => option.setName("evidence").setDescription("Optional supporting evidence."))
+    .addStringOption((option) => option.setName("rule").setDescription("Optional server rule or law reference.").setMaxLength(120)),
   async execute(interaction) {
     if (!interaction.inCachedGuild() || !(await requireSetup(interaction))) return;
     const target = interaction.options.getMember("member") as GuildMember | null;
@@ -48,9 +49,10 @@ export const warnCommand: Command = {
     if (error) return replyError(interaction, error);
     const reason = interaction.options.getString("reason", true);
     const evidence = interaction.options.getAttachment("evidence");
+    const rule = interaction.options.getString("rule") ?? undefined;
     const id = await beginCase(interaction.guildId);
     const dmDelivered = await sendModerationDM(interaction.guild, target.user, "warn", id, reason);
-    await recordModerationCase(interaction.guild, { id, action: "warn", target: target.user, moderatorId: interaction.user.id, reason, evidenceUrl: evidence?.url, dmDelivered });
+    await recordModerationCase(interaction.guild, { id, action: "warn", target: target.user, moderatorId: interaction.user.id, reason, rule, evidenceUrl: evidence?.url, dmDelivered });
     await interaction.reply({ content: `${target} received warning **${caseLabel(id)}**.${dmDelivered ? "" : " Their DMs were closed, so the notice could not be delivered."}`, flags: MessageFlags.Ephemeral });
   },
 };
@@ -63,7 +65,8 @@ export const strikeCommand: Command = {
     .setDefaultMemberPermissions(PermissionFlagsBits.ModerateMembers)
     .addUserOption((option) => option.setName("member").setDescription("The member to strike.").setRequired(true))
     .addStringOption((option) => option.setName("reason").setDescription("Why the strike is being issued.").setMaxLength(400).setRequired(true))
-    .addAttachmentOption((option) => option.setName("evidence").setDescription("Optional supporting evidence.")),
+    .addAttachmentOption((option) => option.setName("evidence").setDescription("Optional supporting evidence."))
+    .addStringOption((option) => option.setName("rule").setDescription("Optional server rule or law reference.").setMaxLength(120)),
   async execute(interaction) {
     if (!interaction.inCachedGuild() || !(await requireSetup(interaction))) return;
     const target = interaction.options.getMember("member") as GuildMember | null;
@@ -72,9 +75,10 @@ export const strikeCommand: Command = {
     if (error) return replyError(interaction, error);
     const reason = interaction.options.getString("reason", true);
     const evidence = interaction.options.getAttachment("evidence");
+    const rule = interaction.options.getString("rule") ?? undefined;
     const id = await beginCase(interaction.guildId);
     const dmDelivered = await sendModerationDM(interaction.guild, target.user, "strike", id, reason);
-    await recordModerationCase(interaction.guild, { id, action: "strike", target: target.user, moderatorId: interaction.user.id, reason, evidenceUrl: evidence?.url, dmDelivered });
+    await recordModerationCase(interaction.guild, { id, action: "strike", target: target.user, moderatorId: interaction.user.id, reason, rule, evidenceUrl: evidence?.url, dmDelivered });
     await interaction.reply({ content: `${target} received strike **${caseLabel(id)}**.${dmDelivered ? "" : " Their DMs were closed, so the notice could not be delivered."}`, flags: MessageFlags.Ephemeral });
   },
 };
@@ -88,7 +92,8 @@ export const timeoutCommand: Command = {
     .addUserOption((option) => option.setName("member").setDescription("The member to timeout.").setRequired(true))
     .addStringOption((option) => option.setName("duration").setDescription("Examples: 30m, 2h, 7d, or 4w (maximum 28 days).").setMaxLength(8).setRequired(true))
     .addStringOption((option) => option.setName("reason").setDescription("Why the timeout is being applied.").setMaxLength(400).setRequired(true))
-    .addAttachmentOption((option) => option.setName("evidence").setDescription("Optional supporting evidence.")),
+    .addAttachmentOption((option) => option.setName("evidence").setDescription("Optional supporting evidence."))
+    .addStringOption((option) => option.setName("rule").setDescription("Optional server rule or law reference.").setMaxLength(120)),
   async execute(interaction) {
     if (!interaction.inCachedGuild() || !(await requireSetup(interaction))) return;
     const target = interaction.options.getMember("member") as GuildMember | null;
@@ -100,10 +105,11 @@ export const timeoutCommand: Command = {
     if (!durationMs) return replyError(interaction, "Use a duration such as `30m`, `2h`, `7d`, or `4w`. The maximum is 28 days.");
     const reason = interaction.options.getString("reason", true);
     const evidence = interaction.options.getAttachment("evidence");
+    const rule = interaction.options.getString("rule") ?? undefined;
     const id = await beginCase(interaction.guildId);
     await target.timeout(durationMs, auditReason(id, interaction.user.tag, reason));
     const dmDelivered = await sendModerationDM(interaction.guild, target.user, "timeout", id, reason, durationMs);
-    await recordModerationCase(interaction.guild, { id, action: "timeout", target: target.user, moderatorId: interaction.user.id, reason, evidenceUrl: evidence?.url, durationMs, dmDelivered });
+    await recordModerationCase(interaction.guild, { id, action: "timeout", target: target.user, moderatorId: interaction.user.id, reason, rule, evidenceUrl: evidence?.url, durationMs, dmDelivered });
     await interaction.reply({ content: `${target} was timed out for **${formatDuration(durationMs)}**. Case **${caseLabel(id)}**.${dmDelivered ? "" : " Their DMs were closed."}`, flags: MessageFlags.Ephemeral });
   },
 };
@@ -140,7 +146,8 @@ export const kickCommand: Command = {
     .setDefaultMemberPermissions(PermissionFlagsBits.KickMembers)
     .addUserOption((option) => option.setName("member").setDescription("The member to kick.").setRequired(true))
     .addStringOption((option) => option.setName("reason").setDescription("Why the member is being kicked.").setMaxLength(400).setRequired(true))
-    .addAttachmentOption((option) => option.setName("evidence").setDescription("Optional supporting evidence.")),
+    .addAttachmentOption((option) => option.setName("evidence").setDescription("Optional supporting evidence."))
+    .addStringOption((option) => option.setName("rule").setDescription("Optional server rule or law reference.").setMaxLength(120)),
   async execute(interaction) {
     if (!interaction.inCachedGuild() || !(await requireSetup(interaction))) return;
     const target = interaction.options.getMember("member") as GuildMember | null;
@@ -149,10 +156,11 @@ export const kickCommand: Command = {
     if (error) return replyError(interaction, error);
     const reason = interaction.options.getString("reason", true);
     const evidence = interaction.options.getAttachment("evidence");
+    const rule = interaction.options.getString("rule") ?? undefined;
     const id = await beginCase(interaction.guildId);
     await target.kick(auditReason(id, interaction.user.tag, reason));
     const dmDelivered = await sendModerationDM(interaction.guild, target.user, "kick", id, reason);
-    await recordModerationCase(interaction.guild, { id, action: "kick", target: target.user, moderatorId: interaction.user.id, reason, evidenceUrl: evidence?.url, dmDelivered });
+    await recordModerationCase(interaction.guild, { id, action: "kick", target: target.user, moderatorId: interaction.user.id, reason, rule, evidenceUrl: evidence?.url, dmDelivered });
     await interaction.reply({ content: `${target.user.tag} was kicked. Case **${caseLabel(id)}**.${dmDelivered ? "" : " Their DMs were closed."}`, flags: MessageFlags.Ephemeral });
   },
 };
@@ -174,7 +182,8 @@ export const banCommand: Command = {
       { name: "Previous 3 days", value: 259200 },
       { name: "Previous 7 days", value: 604800 },
     ))
-    .addAttachmentOption((option) => option.setName("evidence").setDescription("Optional supporting evidence.")),
+    .addAttachmentOption((option) => option.setName("evidence").setDescription("Optional supporting evidence."))
+    .addStringOption((option) => option.setName("rule").setDescription("Optional server rule or law reference.").setMaxLength(120)),
   async execute(interaction) {
     if (!interaction.inCachedGuild() || !(await requireSetup(interaction))) return;
     const target = interaction.options.getUser("user", true);
@@ -188,12 +197,46 @@ export const banCommand: Command = {
     }
     const reason = interaction.options.getString("reason", true);
     const evidence = interaction.options.getAttachment("evidence");
+    const rule = interaction.options.getString("rule") ?? undefined;
     const deleteMessageSeconds = interaction.options.getInteger("delete-messages") ?? 0;
     const id = await beginCase(interaction.guildId);
     await interaction.guild.members.ban(target, { deleteMessageSeconds, reason: auditReason(id, interaction.user.tag, reason) });
     const dmDelivered = await sendModerationDM(interaction.guild, target, "ban", id, reason);
-    await recordModerationCase(interaction.guild, { id, action: "ban", target, moderatorId: interaction.user.id, reason, evidenceUrl: evidence?.url, dmDelivered });
+    await recordModerationCase(interaction.guild, { id, action: "ban", target, moderatorId: interaction.user.id, reason, rule, evidenceUrl: evidence?.url, dmDelivered });
     await interaction.reply({ content: `${target.tag} was banned. Case **${caseLabel(id)}**.${dmDelivered ? "" : " Their DMs were closed."}`, flags: MessageFlags.Ephemeral });
+  },
+};
+
+export const softbanCommand: Command = {
+  data: new SlashCommandBuilder()
+    .setName("softban")
+    .setDescription("Ban then immediately unban a member, deleting up to 7 days of recent messages.")
+    .setDMPermission(false)
+    .setDefaultMemberPermissions(PermissionFlagsBits.BanMembers)
+    .addUserOption((option) => option.setName("user").setDescription("The user to softban.").setRequired(true))
+    .addStringOption((option) => option.setName("reason").setDescription("Why the user is being softbanned.").setMaxLength(400).setRequired(true))
+    .addAttachmentOption((option) => option.setName("evidence").setDescription("Optional supporting evidence."))
+    .addStringOption((option) => option.setName("rule").setDescription("Optional server rule or law reference.").setMaxLength(120)),
+  async execute(interaction) {
+    if (!interaction.inCachedGuild() || !(await requireSetup(interaction))) return;
+    const target = interaction.options.getUser("user", true);
+    if (target.id === interaction.user.id) return replyError(interaction, "You cannot softban yourself.");
+    if (target.id === interaction.guild.ownerId) return replyError(interaction, "The server owner cannot be softbanned.");
+    if (target.id === interaction.client.user.id) return replyError(interaction, "Grey Ghost refuses to softban itself into the mist.");
+    const member = await interaction.guild.members.fetch(target.id).catch(() => null);
+    if (member) {
+      const error = memberActionError(interaction.member, member, "ban");
+      if (error) return replyError(interaction, error);
+    }
+    const reason = interaction.options.getString("reason", true);
+    const evidence = interaction.options.getAttachment("evidence");
+    const rule = interaction.options.getString("rule") ?? undefined;
+    const id = await beginCase(interaction.guildId);
+    const dmDelivered = await sendModerationDM(interaction.guild, target, "softban", id, reason);
+    await interaction.guild.members.ban(target, { deleteMessageSeconds: 604800, reason: auditReason(id, interaction.user.tag, reason) });
+    await interaction.guild.members.unban(target.id, auditReason(id, interaction.user.tag, `Softban completed: ${reason}`));
+    await recordModerationCase(interaction.guild, { id, action: "softban", target, moderatorId: interaction.user.id, reason, rule, evidenceUrl: evidence?.url, dmDelivered });
+    await interaction.reply({ content: `${target.tag} was softbanned and may rejoin. Recent messages (up to 7 days) were removed. Case **${caseLabel(id)}**.${dmDelivered ? "" : " Their DMs were closed."}`, flags: MessageFlags.Ephemeral });
   },
 };
 

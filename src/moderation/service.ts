@@ -20,6 +20,7 @@ const ACTION_LABELS: Record<ModerationAction, string> = {
   untimeout: "Timeout Removed",
   kick: "Kick",
   ban: "Ban",
+  softban: "Softban",
   unban: "Unban",
   purge: "Message Purge",
   slowmode: "Slowmode Changed",
@@ -34,6 +35,7 @@ const ACTION_COLORS: Record<ModerationAction, number> = {
   untimeout: 0x6fa36f,
   kick: 0xb75b39,
   ban: 0x8b1e3f,
+  softban: 0xb75b39,
   unban: 0x5b8f70,
   purge: 0x7188a0,
   slowmode: 0x7188a0,
@@ -119,6 +121,7 @@ export async function recordModerationCase(
     target: User;
     moderatorId: string;
     reason: string;
+    rule?: string;
     evidenceUrl?: string;
     durationMs?: number;
     dmDelivered: boolean;
@@ -131,6 +134,7 @@ export async function recordModerationCase(
     targetTag: input.target.tag,
     moderatorId: input.moderatorId,
     reason: input.reason,
+    rule: input.rule,
     evidenceUrl: input.evidenceUrl,
     durationMs: input.durationMs,
     expiresAt: input.durationMs ? Date.now() + input.durationMs : undefined,
@@ -152,7 +156,9 @@ export async function recordModerationCase(
         { name: "DM", value: input.dmDelivered ? "Delivered" : "Could not deliver", inline: true },
         { name: "Reason", value: input.reason },
       )
+      .setFooter({ text: `Case ${caseLabel(input.id)}` })
       .setTimestamp(moderationCase.createdAt);
+    if (input.rule) embed.addFields({ name: "Rule", value: input.rule, inline: true });
     if (input.durationMs) embed.addFields({ name: "Duration", value: formatDuration(input.durationMs), inline: true });
     if (input.evidenceUrl) embed.addFields({ name: "Evidence", value: `[Open attachment](${input.evidenceUrl})` });
     await channel.send({ embeds: [embed] });
@@ -195,6 +201,7 @@ export async function recordChannelModerationCase(
         { name: "Moderator", value: `<@${input.moderatorId}>`, inline: true },
         { name: "Reason", value: input.reason },
       )
+      .setFooter({ text: `Case ${caseLabel(input.id)}` })
       .setTimestamp(moderationCase.createdAt)] });
   }
   return moderationCase;

@@ -28,6 +28,9 @@ export const moderationCommand: Command = {
     .addSubcommand((subcommand) => subcommand.setName("case-void").setDescription("Void a case without erasing its audit trail.")
       .addIntegerOption((option) => option.setName("number").setDescription("The case number.").setMinValue(1).setRequired(true))
       .addStringOption((option) => option.setName("reason").setDescription("Why the case is being voided.").setMaxLength(400).setRequired(true)))
+    .addSubcommand((subcommand) => subcommand.setName("case-evidence").setDescription("Attach or replace evidence on a moderation case.")
+      .addIntegerOption((option) => option.setName("number").setDescription("The case number.").setMinValue(1).setRequired(true))
+      .addAttachmentOption((option) => option.setName("evidence").setDescription("The evidence attachment.").setRequired(true)))
     .addSubcommand((subcommand) => subcommand.setName("clear-warnings").setDescription("Void all active warnings belonging to a user.")
       .addUserOption((option) => option.setName("user").setDescription("The user whose warnings will be cleared.").setRequired(true))
       .addStringOption((option) => option.setName("reason").setDescription("Why the warnings are being cleared.").setMaxLength(400).setRequired(true)))
@@ -46,6 +49,20 @@ export const moderationCommand: Command = {
   async execute(interaction) {
     if (!interaction.inCachedGuild()) return;
     const subcommand = interaction.options.getSubcommand();
+
+
+    if (subcommand === "case-evidence") {
+      const id = interaction.options.getInteger("number", true);
+      const current = await getModerationCase(interaction.guildId, id);
+      if (!current) {
+        await interaction.reply({ content: `Case ${caseLabel(id)} was not found.`, flags: MessageFlags.Ephemeral });
+        return;
+      }
+      const evidence = interaction.options.getAttachment("evidence", true);
+      const updated = await updateModerationCase(interaction.guildId, id, { evidenceUrl: evidence.url, editedBy: interaction.user.id, editedAt: Date.now() });
+      await interaction.reply({ content: updated ? `Evidence was attached to case **${caseLabel(id)}**.` : "That case could not be updated.", flags: MessageFlags.Ephemeral });
+      return;
+    }
 
     if (subcommand === "case-edit" || subcommand === "case-void") {
       const id = interaction.options.getInteger("number", true);
@@ -131,6 +148,7 @@ export const moderationCommand: Command = {
           { name: "Reason", value: moderationCase.reason },
         )
         .setTimestamp(moderationCase.createdAt);
+      if (moderationCase.rule) embed.addFields({ name: "Rule", value: moderationCase.rule, inline: true });
       if (moderationCase.durationMs) embed.addFields({ name: "Duration", value: formatDuration(moderationCase.durationMs), inline: true });
       if (moderationCase.evidenceUrl) embed.addFields({ name: "Evidence", value: `[Open attachment](${moderationCase.evidenceUrl})` });
       if (moderationCase.editedAt) embed.addFields({ name: "Edited", value: `<@${moderationCase.editedBy}> · <t:${Math.floor(moderationCase.editedAt / 1000)}:f>` });

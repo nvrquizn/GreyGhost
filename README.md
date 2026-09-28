@@ -488,3 +488,7 @@ Grey Ghost can now include a configured Discord attachment/CDN or Tenor GIF URL 
 - Published statistics dashboards also use separate messages for every page and refresh all of them automatically every 15 minutes.
 - Existing one-message dashboards migrate automatically on refresh.
 - This also fixes the help roster crash caused by Discord's 1,024-character embed-field limit.
+
+## v0.29.4 — Moderation & Case Management
+
+Grey Ghost's moderation suite now includes direct warning history, case lookup, complete user modlogs, private staff notes, softbans, optional rule references, and attachable case evidence. Every moderation action continues to use the permanent numbered case system, while private notes remain non-punitive and invisible to the affected member.

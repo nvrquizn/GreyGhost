@@ -13,7 +13,7 @@ function sectionEmbed(section: HelpSection, page: number, total: number): EmbedB
     .setColor(0xb8c2cc)
     .setTitle(`Grey Ghost · Command Roster · ${section.title}`)
     .setDescription(section.lines.join("\n"))
-    .setFooter({ text: `Version 0.29.3 · Page ${page}/${total} · Slash and ? prefix commands` });
+    .setFooter({ text: `Version 0.29.4 · Page ${page}/${total} · Slash and ? prefix commands` });
 }
 
 export function renderHelpPages(member: GuildMember | null, isModmailStaff = false): EmbedBuilder[] {
@@ -141,10 +141,15 @@ export function renderHelpPages(member: GuildMember | null, isModmailStaff = fal
     line("strike", "Issue a recorded strike."),
     line("timeout", "Apply a temporary timeout."),
     line("untimeout", "Remove an active timeout."),
-    line("moderation", "Inspect, edit, void, and annotate cases."),
+    line("warnings", "View a member's warning history."),
+    line("case", "View a moderation case by number."),
+    line("modlogs", "View a member's complete moderation history."),
+    line("note", "Add a private staff note about a member."),
+    line("notes", "View private staff notes about a member."),
+    line("moderation", "Edit, void, attach evidence to, and annotate cases."),
   );
   if (canKick) moderation.push(line("kick", "Remove a member from the server."));
-  if (canBan) moderation.push(line("ban", "Ban a user."), line("unban", "Remove a ban by user ID."));
+  if (canBan) moderation.push(line("ban", "Ban a user."), line("softban", "Ban then immediately unban to remove recent messages."), line("unban", "Remove a ban by user ID."));
   if (messageManager) moderation.push(line("purge", "Bulk-delete recent messages."));
   if (canManageChannels) moderation.push(
     line("slowmode", "Change the current channel's slowmode."),
