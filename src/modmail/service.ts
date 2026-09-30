@@ -130,6 +130,7 @@ export async function openTicket(
   category: string,
   subject: string,
   details: string,
+  ownerOnly = false,
 ): Promise<ModmailTicket> {
   const settings = await getGuildSettings(guild.id);
   const config = settings.modmail;
@@ -146,11 +147,10 @@ export async function openTicket(
     topic: `Grey Ghost modmail ${ticketLabel(ticketNumber)} · ${user.tag} · ${user.id}`,
     permissionOverwrites: [
       { id: guild.roles.everyone.id, deny: [PermissionFlagsBits.ViewChannel] },
-      ...[...new Set([
-        config.staffRoleId,
-        await configuredModeratorRoleId(guild.id, guild),
-        await configuredTrialModeratorRoleId(guild.id, guild),
-      ].filter((id): id is string => Boolean(id)))].map((id) => ({
+      ...[...new Set((ownerOnly
+        ? [settings.ownerRoleId, guild.ownerId]
+        : [config.staffRoleId, await configuredModeratorRoleId(guild.id, guild), await configuredTrialModeratorRoleId(guild.id, guild)])
+        .filter((id): id is string => Boolean(id)))].map((id) => ({
         id,
         allow: [
           PermissionFlagsBits.ViewChannel,
@@ -182,6 +182,7 @@ export async function openTicket(
       channelId: channel.id,
       category,
       subject,
+      ownerOnly,
     });
   } catch (error) {
     await channel.delete("Rolling back failed modmail ticket creation").catch(() => undefined);
@@ -196,10 +197,12 @@ export async function openTicket(
       { name: "Opened by", value: `${user} · ${user.tag}\n\`${user.id}\`` },
       { name: "Subject", value: subject },
       { name: "Status", value: "Open · Unclaimed" },
+      { name: "Visibility", value: ownerOnly ? "Owner Only" : "Staff" },
     )
     .setThumbnail(user.displayAvatarURL())
     .setTimestamp(ticket.openedAt);
-  const header = await channel.send({ content: `<@&${config.staffRoleId}>`, embeds: [embed], components: [ticketControls(ticket)] });
+  const pingTarget = ownerOnly && settings.ownerRoleId ? `<@&${settings.ownerRoleId}>` : `<@&${config.staffRoleId}>`;
+  const header = await channel.send({ content: pingTarget, embeds: [embed], components: [ticketControls(ticket)], allowedMentions: { roles: [ownerOnly && settings.ownerRoleId ? settings.ownerRoleId : config.staffRoleId] } });
   ticket = (await updateModmailTicket(guild.id, ticket.id, { headerMessageId: header.id })) ?? ticket;
   return ticket;
 }

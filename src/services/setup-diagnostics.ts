@@ -48,6 +48,7 @@ export async function diagnoseGuildSetup(guild: Guild): Promise<SetupDiagnostics
     ["Reaction logs", settings.reactionLogChannelId],
     ["Statistics dashboard", settings.statsChannelId],
     ["Chronicles channel", settings.chronicleChannelId],
+    ["Level-up announcements", settings.levelAnnouncementChannelId],
   ];
 
   for (const [label, channelId] of channelSettings) {
@@ -87,6 +88,16 @@ export async function diagnoseGuildSetup(guild: Guild): Promise<SetupDiagnostics
     result.warnings.push("Petitions, council proposals, and staff applications are not configured.");
   }
 
+
+
+  if (settings.ownerRoleId) {
+    const ownerRole = guild.roles.cache.get(settings.ownerRoleId);
+    if (!ownerRole) result.errors.push("The configured owner role was deleted.");
+    else if (ownerRole.id === guild.roles.everyone.id) result.errors.push("The owner role cannot be @everyone.");
+    else result.passed.push("The owner-only modmail role is available.");
+  } else {
+    result.warnings.push("Owner-only modmail tickets are unavailable until an owner role is configured.");
+  }
 
   if (!settings.eventAnnouncementChannelId) result.warnings.push("Event announcement channel is not configured.");
   else {

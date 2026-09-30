@@ -35,22 +35,46 @@ export function renderCouncilProposal(proposal: CouncilProposal) {
 
 export function renderStaffApplication(application: StaffApplication) {
   const closed = application.status !== "pending";
-  const embed = new EmbedBuilder()
+  const answer = (value?: string) => {
+    const text = value?.trim() || "Not provided.";
+    return text.length > 700 ? `${text.slice(0, 697)}…` : text;
+  };
+
+  const first = new EmbedBuilder()
     .setColor(statusColor[application.status])
     .setTitle(`Staff Application #${application.id} · ${application.applicantName}`)
     .setThumbnail(application.applicantAvatarUrl)
     .addFields(
       { name: "Applicant", value: `<@${application.applicantId}> · \`${application.applicantId}\`` },
-      { name: "Why do you want to join staff?", value: application.motivation },
-      { name: "Relevant experience", value: application.experience },
-      { name: "Availability and timezone", value: application.availability },
-      { name: "Strengths and contribution", value: application.strengths },
-      { name: "Additional information", value: application.additional || "None provided." },
+      { name: "1. Discord username", value: answer(application.discordUsername ?? application.applicantName), inline: true },
+      { name: "2. Timezone", value: answer(application.timezone), inline: true },
+      { name: "3. Are you 16 or older?", value: answer(application.age16Plus), inline: true },
+      { name: "4. Prior moderation / management experience", value: answer(application.experience) },
+      { name: "5. Availability", value: answer(application.availability) },
+      { name: "6. Handling spam or disruptive behavior", value: answer(application.scenarioSpam) },
+      { name: "7. Staff member acting inappropriately", value: answer(application.scenarioStaffMisconduct) },
+    )
+    .setFooter({ text: "Staff Application · Part 1 of 2" })
+    .setTimestamp(application.createdAt);
+
+  const second = new EmbedBuilder()
+    .setColor(statusColor[application.status])
+    .setTitle(`Staff Application #${application.id} · Continued`)
+    .addFields(
+      { name: "8. Someone posts NSFW speech", value: answer(application.scenarioNsfw) },
+      { name: "9. Handling conflict", value: answer(application.scenarioConflict) },
+      { name: "10. Promoting a positive and inclusive atmosphere", value: answer(application.inclusivity) },
+      { name: "11. Staying calm and unbiased", value: answer(application.calmUnbiased) },
+      { name: "12. Why do you want to join staff?", value: answer(application.motivation) },
+      { name: "13. Strengths and contribution", value: answer(application.strengths) },
+      { name: "14. What if the correct moderation action is unclear?", value: answer(application.uncertainty) },
+      { name: "15. Additional information", value: answer(application.additional) },
       { name: "Staff Vote", value: `✅ Yes · **${application.yesVotes.length}**\n❌ No · **${application.noVotes.length}**`, inline: true },
       { name: "Final Status", value: statusLabel[application.status], inline: true },
     )
     .setFooter({ text: "Votes are advisory; only the server owner can accept or deny this application." })
     .setTimestamp(application.createdAt);
+
   const voteRow = new ActionRowBuilder<ButtonBuilder>().addComponents(
     new ButtonBuilder().setCustomId(`governance:application:yes:${application.id}`).setEmoji("✅").setLabel(`Yes · ${application.yesVotes.length}`).setStyle(ButtonStyle.Secondary).setDisabled(closed),
     new ButtonBuilder().setCustomId(`governance:application:no:${application.id}`).setEmoji("❌").setLabel(`No · ${application.noVotes.length}`).setStyle(ButtonStyle.Secondary).setDisabled(closed),
@@ -59,5 +83,5 @@ export function renderStaffApplication(application: StaffApplication) {
     new ButtonBuilder().setCustomId(`governance:application:accept:${application.id}`).setLabel("Accept Application").setStyle(ButtonStyle.Success).setDisabled(closed),
     new ButtonBuilder().setCustomId(`governance:application:deny:${application.id}`).setLabel("Deny Application").setStyle(ButtonStyle.Danger).setDisabled(closed),
   );
-  return { embed, rows: [voteRow, decisionRow] };
+  return { embeds: [first, second], rows: [voteRow, decisionRow] };
 }

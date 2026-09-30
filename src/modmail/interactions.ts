@@ -1,5 +1,7 @@
 import {
   ActionRowBuilder,
+  ButtonBuilder,
+  ButtonStyle,
   Events,
   MessageFlags,
   ModalBuilder,
@@ -33,7 +35,29 @@ export function registerModmailInteractions(client: Client): void {
         const guildId = interaction.customId.split(":")[2];
         const category = interaction.values[0];
         if (!guildId || !category) return;
-        const modal = new ModalBuilder().setCustomId(`modmail:intake:${guildId}:${category}`).setTitle("Open a Modmail Ticket");
+        const settings = await getGuildSettings(guildId);
+        const privacyRow = new ActionRowBuilder<ButtonBuilder>().addComponents(
+          new ButtonBuilder().setCustomId(`modmail:privacy:${guildId}:${category}:staff`).setLabel("Staff Ticket").setStyle(ButtonStyle.Primary),
+          new ButtonBuilder().setCustomId(`modmail:privacy:${guildId}:${category}:owner`).setLabel("Owner Only").setStyle(ButtonStyle.Secondary).setDisabled(!settings.ownerRoleId),
+        );
+        await interaction.reply({
+          content: settings.ownerRoleId
+            ? "Who should be able to review this ticket? **Owner Only** restricts it to the configured owner role and the server owner."
+            : "Choose **Staff Ticket** to continue. Owner-only tickets are unavailable until the server configures an owner role.",
+          components: [privacyRow],
+        });
+        return;
+      }
+
+      if (interaction.isButton() && interaction.customId.startsWith("modmail:privacy:")) {
+        const [, , guildId, category, privacy] = interaction.customId.split(":");
+        if (!guildId || !category || !privacy) return;
+        const settings = await getGuildSettings(guildId);
+        if (privacy === "owner" && !settings.ownerRoleId) {
+          await interaction.reply({ content: "Owner-only tickets are not configured for this server." });
+          return;
+        }
+        const modal = new ModalBuilder().setCustomId(`modmail:intake:${guildId}:${category}:${privacy}`).setTitle("Open a Modmail Ticket");
         modal.addComponents(
           new ActionRowBuilder<TextInputBuilder>().addComponents(new TextInputBuilder().setCustomId("subject").setLabel("Short subject").setStyle(TextInputStyle.Short).setMaxLength(100).setRequired(true)),
           new ActionRowBuilder<TextInputBuilder>().addComponents(new TextInputBuilder().setCustomId("details").setLabel("Explain the situation").setPlaceholder("Include the relevant details, names, dates, and context.").setStyle(TextInputStyle.Paragraph).setMinLength(10).setMaxLength(4000).setRequired(true)),
@@ -43,7 +67,7 @@ export function registerModmailInteractions(client: Client): void {
       }
 
       if (interaction.isModalSubmit() && interaction.customId.startsWith("modmail:intake:")) {
-        const [, , guildId, categoryId] = interaction.customId.split(":");
+        const [, , guildId, categoryId, privacy] = interaction.customId.split(":");
         if (!guildId || !categoryId) return;
         await interaction.deferReply();
         const guild = client.guilds.cache.get(guildId);
@@ -56,8 +80,8 @@ export function registerModmailInteractions(client: Client): void {
           await interaction.editReply(`You already have open ticket ${ticketLabel(existing.id)}. Reply here in DMs to continue it.`);
           return;
         }
-        const ticket = await openTicket(guild, interaction.user, categoryName(categoryId), interaction.fields.getTextInputValue("subject"), interaction.fields.getTextInputValue("details"));
-        await interaction.editReply(`Your ticket **${ticketLabel(ticket.id)}** has been opened with **${guild.name}** staff. Reply to Grey Ghost's DMs to add more information.`);
+        const ticket = await openTicket(guild, interaction.user, categoryName(categoryId), interaction.fields.getTextInputValue("subject"), interaction.fields.getTextInputValue("details"), privacy === "owner");
+        await interaction.editReply(`Your ${ticket.ownerOnly ? "owner-only " : ""}ticket **${ticketLabel(ticket.id)}** has been opened with **${guild.name}**. Reply to Grey Ghost's DMs to add more information.`);
         return;
       }
 
@@ -71,9 +95,11 @@ export function registerModmailInteractions(client: Client): void {
         return;
       }
       const config = settings.modmail;
-      const allowed = await isModmailStaffMember(interaction.member, config?.staffRoleId);
+      const allowed = ticket.ownerOnly
+        ? interaction.user.id === interaction.guild.ownerId || Boolean(settings.ownerRoleId && interaction.member.roles.cache.has(settings.ownerRoleId))
+        : await isModmailStaffMember(interaction.member, config?.staffRoleId);
       if (!allowed) {
-        await interaction.reply({ content: "Only modmail staff can use that control.", flags: MessageFlags.Ephemeral });
+        await interaction.reply({ content: ticket.ownerOnly ? "Only the configured owner role or server owner can use controls on this owner-only ticket." : "Only modmail staff can use that control.", flags: MessageFlags.Ephemeral });
         return;
       }
 

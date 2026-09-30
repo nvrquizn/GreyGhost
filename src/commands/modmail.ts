@@ -26,9 +26,11 @@ export const modmailCommand: Command = {
       await interaction.reply({ content: "This is not a configured modmail ticket channel.", flags: MessageFlags.Ephemeral });
       return;
     }
-    const allowed = await isModmailStaffMember(interaction.member, config.staffRoleId);
+    const allowed = ticket.ownerOnly
+      ? interaction.user.id === interaction.guild.ownerId || Boolean(settings.ownerRoleId && interaction.member.roles.cache.has(settings.ownerRoleId))
+      : await isModmailStaffMember(interaction.member, config.staffRoleId);
     if (!allowed) {
-      await interaction.reply({ content: "Only the configured modmail staff can use this command.", flags: MessageFlags.Ephemeral });
+      await interaction.reply({ content: ticket.ownerOnly ? "Only the configured owner role or server owner can use commands in this owner-only ticket." : "Only the configured modmail staff can use this command.", flags: MessageFlags.Ephemeral });
       return;
     }
     const action = interaction.options.getSubcommand();

@@ -526,3 +526,10 @@ Grey Ghost now records member profile-picture updates in the configured server l
 
 ## v0.31.0 — Levels
 Grey Ghost awards persistent message XP with anti-spam scaling, level role synchronization, staff XP controls, excluded roles, leaderboards, and profile integration.
+
+## v0.31.1 — Level Announcements, Owner-Only Modmail & Expanded Staff Applications
+
+- Configure level announcements with `/setup level-up-channel`.
+- Configure the owner-only ticket role with `/setup owner-role`.
+- Modmail users can choose between standard staff visibility and owner-only visibility.
+- `/staffapply` now uses a three-part, 15-question application flow.

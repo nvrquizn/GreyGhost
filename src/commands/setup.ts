@@ -36,6 +36,8 @@ function settingsSummary(settings: GuildSettings): string {
     `**Chronicles:** ${settings.chronicleChannelId ? `<#${settings.chronicleChannelId}>` : "Not configured"}`,
     `**Moderator role:** ${settings.moderatorRoleId ? `<@&${settings.moderatorRoleId}>` : "Not configured"}`,
     `**Trial moderator role:** ${settings.trialModeratorRoleId ? `<@&${settings.trialModeratorRoleId}>` : "Not configured"}`,
+    `**Owner role:** ${settings.ownerRoleId ? `<@&${settings.ownerRoleId}>` : "Not configured"}`,
+    `**Level announcements:** ${settings.levelAnnouncementChannelId ? `<#${settings.levelAnnouncementChannelId}>` : "Not configured"}`,
     `**Dragon grant channel:** ${settings.dragonGrantChannelId ? `<#${settings.dragonGrantChannelId}>` : "Not configured (Grey Ghost will DM recipients)"}`,
     `**Champions role:** ${settings.championsRoleId ? `<@&${settings.championsRoleId}>` : "Not configured"}`,
     `**Tourney Summons:** ${settings.tourneySummonsRoleId ? `<@&${settings.tourneySummonsRoleId}>` : "Not configured"}`,
@@ -212,6 +214,25 @@ export const setupCommand: Command = {
     )
     .addSubcommand((subcommand) =>
       subcommand
+        .setName("owner-role")
+        .setDescription("Choose the role allowed to access owner-only modmail tickets.")
+        .addRoleOption((option) => option
+          .setName("role")
+          .setDescription("The owner or senior-owner role.")
+          .setRequired(true)),
+    )
+    .addSubcommand((subcommand) =>
+      subcommand
+        .setName("level-up-channel")
+        .setDescription("Choose where Grey Ghost announces members reaching new levels.")
+        .addChannelOption((option) => option
+          .setName("channel")
+          .setDescription("The level-up announcement channel.")
+          .addChannelTypes(ChannelType.GuildText, ChannelType.GuildAnnouncement)
+          .setRequired(true)),
+    )
+    .addSubcommand((subcommand) =>
+      subcommand
         .setName("dragon-grants")
         .setDescription("Choose where special dragon grants are announced.")
         .addChannelOption((option) => option
@@ -269,6 +290,8 @@ export const setupCommand: Command = {
               { name: "Chronicles channel", value: "chronicleChannelId" },
               { name: "Moderator role", value: "moderatorRoleId" },
               { name: "Trial moderator role", value: "trialModeratorRoleId" },
+              { name: "Owner role", value: "ownerRoleId" },
+              { name: "Level announcement channel", value: "levelAnnouncementChannelId" },
               { name: "Dragon grant channel", value: "dragonGrantChannelId" },
               { name: "Champions role", value: "championsRoleId" },
               { name: "Tourney Summons role", value: "tourneySummonsRoleId" },
@@ -410,6 +433,28 @@ ${settingsSummary(settings)}`,
 ${settingsSummary(settings)}`,
         flags: MessageFlags.Ephemeral,
       });
+      return;
+    }
+
+    if (subcommand === "owner-role") {
+      const role = interaction.options.getRole("role", true);
+      if (role.id === interaction.guild.roles.everyone.id) {
+        await interaction.reply({ content: "Choose a private owner role—not @everyone.", flags: MessageFlags.Ephemeral });
+        return;
+      }
+      const settings = await updateGuildSettings(interaction.guildId, { ownerRoleId: role.id });
+      await interaction.reply({ content: `${role} can now access owner-only modmail tickets. The server owner always retains access.
+
+${settingsSummary(settings)}`, flags: MessageFlags.Ephemeral });
+      return;
+    }
+
+    if (subcommand === "level-up-channel") {
+      const channel = interaction.options.getChannel("channel", true);
+      const settings = await updateGuildSettings(interaction.guildId, { levelAnnouncementChannelId: channel.id });
+      await interaction.reply({ content: `Level-up announcements will now be posted in ${channel}.
+
+${settingsSummary(settings)}`, flags: MessageFlags.Ephemeral });
       return;
     }
 

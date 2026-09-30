@@ -1,4 +1,4 @@
-GREY GHOST v0.31.0 — STICKY MESSAGES — SAFE REPLACEMENT
+GREY GHOST v0.31.1 — STICKY MESSAGES — SAFE REPLACEMENT
 
 1. Keep your existing live/local files and folders:
    - .env
@@ -30,7 +30,7 @@ GREY GHOST v0.31.0 — STICKY MESSAGES — SAFE REPLACEMENT
 
 7. If npm run check succeeds, commit and push:
    git add .
-   git commit -m "Release Grey Ghost v0.31.0"
+   git commit -m "Release Grey Ghost v0.31.1"
    git push
 
 Railway should redeploy after the push.

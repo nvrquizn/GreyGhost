@@ -66,10 +66,20 @@ const staffApplicationSchema = z.object({
   applicantId: z.string(),
   applicantName: z.string().min(1).max(100),
   applicantAvatarUrl: z.string().url(),
+  discordUsername: z.string().max(100).optional(),
+  timezone: z.string().max(100).optional(),
+  age16Plus: z.string().max(20).optional(),
   motivation: z.string().min(1).max(1000),
   experience: z.string().min(1).max(1000),
   availability: z.string().min(1).max(500),
   strengths: z.string().min(1).max(1000),
+  scenarioSpam: z.string().max(1000).optional(),
+  scenarioStaffMisconduct: z.string().max(1000).optional(),
+  scenarioNsfw: z.string().max(1000).optional(),
+  scenarioConflict: z.string().max(1000).optional(),
+  inclusivity: z.string().max(1000).optional(),
+  calmUnbiased: z.string().max(1000).optional(),
+  uncertainty: z.string().max(1000).optional(),
   additional: z.string().max(1000).optional(),
   channelId: z.string(),
   messageId: z.string(),
@@ -220,6 +230,7 @@ export const modmailTicketSchema = z.object({
   headerMessageId: z.string().optional(),
   category: z.string().min(1).max(80),
   subject: z.string().min(1).max(100),
+  ownerOnly: z.boolean().default(false),
   status: z.enum(["open", "closed", "deleted"]),
   claimedBy: z.string().optional(),
   openedAt: z.number(),
@@ -449,6 +460,8 @@ export const guildSettingsSchema = z.object({
   chronicleChannelId: z.string().optional(),
   moderatorRoleId: z.string().optional(),
   trialModeratorRoleId: z.string().optional(),
+  ownerRoleId: z.string().optional(),
+  levelAnnouncementChannelId: z.string().optional(),
   dragonGrantChannelId: z.string().optional(),
   championsRoleId: z.string().optional(),
   tourneySummonsRoleId: z.string().optional(),
@@ -596,6 +609,8 @@ export async function clearGuildSetting(
     delete current.chronicleChannelId;
     delete current.moderatorRoleId;
     delete current.trialModeratorRoleId;
+    delete current.ownerRoleId;
+    delete current.levelAnnouncementChannelId;
     delete current.championsRoleId;
     delete current.tourneySummonsRoleId;
     delete current.eventChannelId;

@@ -1,5 +1,6 @@
 import { Events, type Client, type GuildMember, type Message, type Role } from "discord.js";
 import { addXp, getLevelGuild, LEVEL_THRESHOLDS, levelFromXp, type LevelThreshold } from "./store.js";
+import { getGuildSettings } from "../services/guild-settings.js";
 
 const recent = new Map<string, Array<{ at: number; fingerprint: string }>>();
 
@@ -62,6 +63,17 @@ async function resolveThresholdRole(member: GuildMember, threshold: LevelThresho
   return member.guild.roles.cache.find((role) => role.name === `Level ${threshold}+`);
 }
 
+
+export async function announceLevelUp(member: GuildMember, level: number): Promise<void> {
+  const settings = await getGuildSettings(member.guild.id);
+  if (!settings.levelAnnouncementChannelId) return;
+  const channel = await member.guild.channels.fetch(settings.levelAnnouncementChannelId).catch(() => null);
+  if (!channel?.isTextBased() || channel.isDMBased()) return;
+  await channel.send({
+    content: `🎉 ${member} reached **Level ${level}**!`,
+    allowedMentions: { users: [member.id] },
+  }).catch(() => undefined);
+}
 export async function syncLevelRoles(member: GuildMember, level: number): Promise<void> {
   for (const threshold of LEVEL_THRESHOLDS) {
     const role = await resolveThresholdRole(member, threshold);
@@ -92,12 +104,7 @@ async function processMessage(message: Message<true>): Promise<void> {
   const afterLevel = levelFromXp(result.after.xp);
   if (afterLevel !== beforeLevel) {
     await syncLevelRoles(member, afterLevel);
-    if (afterLevel > beforeLevel) {
-      await message.channel.send({
-        content: `🎉 ${message.author} reached **Level ${afterLevel}**!`,
-        allowedMentions: { users: [message.author.id] },
-      }).catch(() => undefined);
-    }
+    if (afterLevel > beforeLevel) await announceLevelUp(member, afterLevel);
   }
 }
 

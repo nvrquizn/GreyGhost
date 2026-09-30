@@ -14,7 +14,7 @@ import {
   takeXp,
   type LevelThreshold,
 } from "../levels/store.js";
-import { syncLevelRoles } from "../levels/runtime.js";
+import { announceLevelUp, syncLevelRoles } from "../levels/runtime.js";
 
 const thresholdChoices = LEVEL_THRESHOLDS.map((value) => ({ name: `Level ${value}+`, value }));
 
@@ -101,8 +101,11 @@ export const levelCommand: Command = {
       const user = interaction.options.getUser("user", true);
       const amount = interaction.options.getInteger("xp", true);
       const result = await addXp(interaction.guildId, user.id, amount);
+      const beforeLevel = levelFromXp(result.before.xp);
       const level = levelFromXp(result.after.xp);
       await syncTarget(interaction, user.id, level);
+      const member = await interaction.guild.members.fetch(user.id).catch(() => undefined);
+      if (member && level > beforeLevel) await announceLevelUp(member, level);
       await interaction.reply({ content: `Gave **${amount.toLocaleString()} XP** to ${user}. They now have **${result.after.xp.toLocaleString()} XP** (Level ${level}).`, flags: MessageFlags.Ephemeral });
       return;
     }
