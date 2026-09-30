@@ -107,6 +107,11 @@ current build supports both slash commands and role-aware `?` prefix commands.
   deletion, renaming, settings, and permission changes in the server log while
   keeping reaction activity in its own private log
 
+
+## Sticky messages
+
+Use `/sticky set` in a text or announcement channel to keep important rules or information visible at the bottom of conversation. When a non-bot member posts in that channel, Grey Ghost removes its previous sticky copy and reposts the same text beneath the new activity. `/sticky list` shows configured channels and `/sticky remove` disables a channel's sticky. Reposts suppress mentions to avoid repeated pings.
+
 ## Reminders and utility commands
 
 Reminder durations use compact values such as `30m`, `2h`, `7d`, or `4w`.
@@ -499,7 +504,7 @@ Grey Ghost's moderation suite now includes direct warning history, case lookup, 
 
 Grey Ghost now records member profile-picture updates in the configured server log channel. Both ordinary Discord avatar changes and server-specific profile-picture changes are supported, with before/after links and image previews included in the log embed.
 
-## v0.29.7 — Ticket Closure Controls
+## v0.30.0 — Ticket Closure Controls
 
 - Closed modmail tickets now switch their header panel to **Reopen Ticket** and **Delete Ticket · Moderator** controls.
 - Configure the trial moderator role with `/setup trial-moderator-role role:@Role`. Trial moderators may view, claim, reply to, close, and reopen tickets.
@@ -510,7 +515,7 @@ Grey Ghost now records member profile-picture updates in the configured server l
 
 
 
-## v0.29.7 — New allegiances
+## v0.30.0 — New allegiances
 
 - Adds a **Trial of Seven** self-role panel for **Aerion's Champions** and **Dunk's Champions**.
 - Adds a **Fossoway Apples** self-role panel for the **Red Apples of Cider Hall** and **Green Apples of New Barrel**.

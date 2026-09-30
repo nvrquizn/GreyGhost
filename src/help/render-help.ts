@@ -13,7 +13,7 @@ function sectionEmbed(section: HelpSection, page: number, total: number): EmbedB
     .setColor(0xb8c2cc)
     .setTitle(`Grey Ghost · Command Roster · ${section.title}`)
     .setDescription(section.lines.join("\n"))
-    .setFooter({ text: `Version 0.29.7 · Page ${page}/${total} · Slash and ? prefix commands` });
+    .setFooter({ text: `Version 0.30.0 · Page ${page}/${total} · Slash and ? prefix commands` });
 }
 
 export function renderHelpPages(member: GuildMember | null, isModmailStaff = false): EmbedBuilder[] {
@@ -132,7 +132,10 @@ export function renderHelpPages(member: GuildMember | null, isModmailStaff = fal
     line("selfroles", "Configure and publish self-role panels."),
     line("collection", "Configure and synchronize collection titles."),
   );
-  if (messageManager) staffTools.push(line("embed", "Publish a formatted information embed."));
+  if (messageManager) staffTools.push(
+    line("embed", "Publish a formatted information embed."),
+    line("sticky", "Keep a rules or information message at the bottom of a channel."),
+  );
   if (staffTools.length) sections.push({ title: "Staff Tools", lines: staffTools });
 
   const moderation: string[] = [];

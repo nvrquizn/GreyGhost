@@ -404,6 +404,14 @@ export const loreEntrySchema = z.object({
   updatedAt: z.number().optional(),
 });
 
+
+const stickyMessageSchema = z.object({
+  content: z.string().min(1).max(1900),
+  messageId: z.string().optional(),
+  updatedBy: z.string(),
+  updatedAt: z.number().int().positive(),
+});
+
 const eventPrizeClaimSchema = z.object({
   choiceSlots: z.number().int().min(0).max(2).default(0),
   chosenRoleIds: z.array(z.string()).max(2).default([]),
@@ -437,6 +445,7 @@ export const guildSettingsSchema = z.object({
   statsChannelId: z.string().optional(),
   statsMessageId: z.string().optional(),
   statsMessageIds: z.array(z.string()).max(10).optional(),
+  stickyMessages: z.record(z.string(), stickyMessageSchema).optional(),
   chronicleChannelId: z.string().optional(),
   moderatorRoleId: z.string().optional(),
   trialModeratorRoleId: z.string().optional(),
@@ -490,6 +499,7 @@ const settingsFileSchema = z.record(z.string(), guildSettingsSchema);
 
 export type GuildSettings = z.infer<typeof guildSettingsSchema>;
 export type EventPrizePackage = NonNullable<GuildSettings["eventPrizePackages"]>[string];
+export type StickyMessage = NonNullable<GuildSettings["stickyMessages"]>[string];
 export type SelfRolePanel = NonNullable<GuildSettings["selfRolePanels"]>[string];
 export type CollectionSet = NonNullable<GuildSettings["collectionSets"]>[string];
 export type MemberProfile = NonNullable<GuildSettings["memberProfiles"]>[string];
@@ -582,6 +592,7 @@ export async function clearGuildSetting(
     delete current.statsChannelId;
     delete current.statsMessageId;
     delete current.statsMessageIds;
+    delete current.stickyMessages;
     delete current.chronicleChannelId;
     delete current.moderatorRoleId;
     delete current.trialModeratorRoleId;
@@ -1994,4 +2005,35 @@ export async function resolveJoustRound(
   await writeQueue;
   if (!result) throw new Error("JOUST_NOT_ACTIVE");
   return result;
+}
+
+
+export async function saveStickyMessage(
+  guildId: string,
+  channelId: string,
+  sticky: StickyMessage,
+): Promise<StickyMessage> {
+  writeQueue = writeQueue.catch(() => undefined).then(async () => {
+    const settings = await loadSettings();
+    const guildSettings = settings[guildId] ?? {};
+    const stickyMessages = { ...(guildSettings.stickyMessages ?? {}) };
+    stickyMessages[channelId] = stickyMessageSchema.parse(sticky);
+    settings[guildId] = { ...guildSettings, stickyMessages };
+    await saveSettings();
+  });
+  await writeQueue;
+  return sticky;
+}
+
+export async function removeStickyMessage(guildId: string, channelId: string): Promise<void> {
+  writeQueue = writeQueue.catch(() => undefined).then(async () => {
+    const settings = await loadSettings();
+    const guildSettings = settings[guildId];
+    if (!guildSettings?.stickyMessages?.[channelId]) return;
+    const stickyMessages = { ...guildSettings.stickyMessages };
+    delete stickyMessages[channelId];
+    settings[guildId] = { ...guildSettings, stickyMessages };
+    await saveSettings();
+  });
+  await writeQueue;
 }

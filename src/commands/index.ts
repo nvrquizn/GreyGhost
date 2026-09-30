@@ -71,6 +71,7 @@ import { tavernCommand } from "./tavern.js";
 import { festivalCommand } from "./festival.js";
 import { houseChronicleCommand } from "./housechronicle.js";
 import { cooldownsCommand } from "./cooldowns.js";
+import { stickyCommand } from "./sticky.js";
 
 export const commands: Command[] = [
   pingCommand,
@@ -148,6 +149,7 @@ export const commands: Command[] = [
   festivalCommand,
   houseChronicleCommand,
   cooldownsCommand,
+  stickyCommand,
 ];
 
 export const commandMap = new Map(

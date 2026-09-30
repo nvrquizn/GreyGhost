@@ -1,4 +1,4 @@
-GREY GHOST v0.29.7 — NEW ALLEGIANCES — SAFE REPLACEMENT
+GREY GHOST v0.30.0 — STICKY MESSAGES — SAFE REPLACEMENT
 
 1. Keep your existing live/local files and folders:
    - .env
@@ -30,9 +30,17 @@ GREY GHOST v0.29.7 — NEW ALLEGIANCES — SAFE REPLACEMENT
 
 7. If npm run check succeeds, commit and push:
    git add .
-   git commit -m "Release Grey Ghost v0.29.7"
+   git commit -m "Release Grey Ghost v0.30.0"
    git push
 
 Railway should redeploy after the push.
 
 IMPORTANT: do not replace your existing .env or data/ folder.
+
+
+Sticky messages:
+   /sticky set channel:#art message:<your rules or reminder>
+   /sticky list
+   /sticky remove channel:#art
+
+Grey Ghost reposts configured sticky text after new member messages so it stays at the bottom of the channel.
