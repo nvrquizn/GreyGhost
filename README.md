@@ -504,7 +504,7 @@ Grey Ghost's moderation suite now includes direct warning history, case lookup, 
 
 Grey Ghost now records member profile-picture updates in the configured server log channel. Both ordinary Discord avatar changes and server-specific profile-picture changes are supported, with before/after links and image previews included in the log embed.
 
-## v0.30.0 — Ticket Closure Controls
+## v0.31.0 — Ticket Closure Controls
 
 - Closed modmail tickets now switch their header panel to **Reopen Ticket** and **Delete Ticket · Moderator** controls.
 - Configure the trial moderator role with `/setup trial-moderator-role role:@Role`. Trial moderators may view, claim, reply to, close, and reopen tickets.
@@ -515,10 +515,14 @@ Grey Ghost now records member profile-picture updates in the configured server l
 
 
 
-## v0.30.0 — New allegiances
+## v0.31.0 — New allegiances
 
 - Adds a **Trial of Seven** self-role panel for **Aerion's Champions** and **Dunk's Champions**.
 - Adds a **Fossoway Apples** self-role panel for the **Red Apples of Cider Hall** and **Green Apples of New Barrel**.
 - Both new allegiance panels are single-choice, so choosing one side removes the other configured side automatically.
 - Realm statistics include configured Trial of Seven and Fossoway allegiance counts on their own pages.
 - Realm profiles automatically display either allegiance when a member has one of the configured roles.
+
+
+## v0.31.0 — Levels
+Grey Ghost awards persistent message XP with anti-spam scaling, level role synchronization, staff XP controls, excluded roles, leaderboards, and profile integration.

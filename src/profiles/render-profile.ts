@@ -3,17 +3,19 @@ import { getGuildSettings, getMemberAchievements, getMemberProfile } from "../se
 import { getAdmirerRoleIds } from "./profile-data.js";
 import { isSelfRolePanelId, selfRolePanelDefinitions } from "../selfroles/panels.js";
 import { achievementDefinitions, achievementMap } from "../achievements/definitions.js";
+import { getLevelMember, progressForXp } from "../levels/store.js";
 
 function roleList(roleIds: string[]): string {
   return roleIds.map((roleId) => `<@&${roleId}>`).join(", ").slice(0, 1024);
 }
 
 export async function renderMemberProfile(member: GuildMember): Promise<EmbedBuilder> {
-  const [settings, profile, admirerRoleIds, achievements] = await Promise.all([
+  const [settings, profile, admirerRoleIds, achievements, levelRecord] = await Promise.all([
     getGuildSettings(member.guild.id),
     getMemberProfile(member.guild.id, member.id),
     getAdmirerRoleIds(member.guild.id),
     getMemberAchievements(member.guild.id, member.id),
+    getLevelMember(member.guild.id, member.id),
   ]);
   const collectionSets = Object.values(settings.collectionSets ?? {});
   const titleRoleIds = new Set(collectionSets.map((set) => set.titleRoleId));
@@ -81,6 +83,12 @@ export async function renderMemberProfile(member: GuildMember): Promise<EmbedBui
   embed.addFields({
     name: `Admirer Wishlist · ${wishlist.length}/5`,
     value: wishlist.length ? roleList(wishlist) : "No admirer roles currently wished for.",
+  });
+
+  const levelProgress = progressForXp(levelRecord.xp);
+  embed.addFields({
+    name: "Level & XP",
+    value: `**Level ${levelProgress.level}** · ${levelRecord.xp.toLocaleString()} XP\n${levelProgress.current.toLocaleString()} / ${levelProgress.needed.toLocaleString()} XP toward Level ${levelProgress.level + 1}`,
   });
 
   const joined = member.joinedTimestamp

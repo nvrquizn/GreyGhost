@@ -13,7 +13,7 @@ function sectionEmbed(section: HelpSection, page: number, total: number): EmbedB
     .setColor(0xb8c2cc)
     .setTitle(`Grey Ghost · Command Roster · ${section.title}`)
     .setDescription(section.lines.join("\n"))
-    .setFooter({ text: `Version 0.30.0 · Page ${page}/${total} · Slash and ? prefix commands` });
+    .setFooter({ text: `Version 0.31.0 · Page ${page}/${total} · Slash and ? prefix commands` });
 }
 
 export function renderHelpPages(member: GuildMember | null, isModmailStaff = false): EmbedBuilder[] {
@@ -38,6 +38,7 @@ export function renderHelpPages(member: GuildMember | null, isModmailStaff = fal
         line("about", "Learn about Grey Ghost."),
         line("remindme", "Set, list, or cancel personal reminders."),
         line("cooldowns", "View every personal cooldown and what is ready now."),
+        line("level", "View your level, XP progress, or the level leaderboard."),
         line("userinfo", "View information about a server member."),
         line("serverinfo", "View information about this server."),
         line("rolemembers", "List members who have a selected role."),
@@ -127,6 +128,7 @@ export function renderHelpPages(member: GuildMember | null, isModmailStaff = fal
     line("housequest", "Create, progress, or cancel House quests."),
     line("housechronicle add", "Add a special entry to a House Chronicle."),
     line("achievements", "Grant or revoke special achievements."),
+    line("level", "Administer XP, exclusions, and level reward roles."),
   );
   if (roleManager) staffTools.push(
     line("selfroles", "Configure and publish self-role panels."),
