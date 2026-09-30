@@ -451,6 +451,7 @@ export const guildSettingsSchema = z.object({
   suggestionChannelId: z.string().optional(),
   collectionAnnouncementChannelId: z.string().optional(),
   serverLogChannelId: z.string().optional(),
+  reliabilityLogChannelId: z.string().optional(),
   // Kept for migration from v0.15.2. New configurations use serverLogChannelId.
   reactionLogChannelId: z.string().optional(),
   statsChannelId: z.string().optional(),
@@ -601,6 +602,7 @@ export async function clearGuildSetting(
     delete current.suggestionChannelId;
     delete current.collectionAnnouncementChannelId;
     delete current.serverLogChannelId;
+    delete current.reliabilityLogChannelId;
     delete current.reactionLogChannelId;
     delete current.statsChannelId;
     delete current.statsMessageId;

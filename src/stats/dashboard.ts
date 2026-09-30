@@ -1,6 +1,7 @@
 import { Events, type Client, type Guild, type Message } from "discord.js";
 import { getGuildSettings, updateGuildSettings } from "../services/guild-settings.js";
 import { renderServerStatsPages } from "./render-stats.js";
+import { suppressPersistentDeletion } from "../reliability/suppression.js";
 
 const refreshLocks = new Map<string, Promise<boolean>>();
 
@@ -33,7 +34,10 @@ async function refresh(guild: Guild): Promise<boolean> {
   }
 
   for (const extra of existing.slice(pages.length)) {
-    if (extra) await extra.delete().catch(() => undefined);
+    if (extra) {
+      suppressPersistentDeletion(extra.id);
+      await extra.delete().catch(() => undefined);
+    }
   }
 
   const ids = pageMessages.map((message) => message.id);

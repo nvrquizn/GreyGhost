@@ -45,6 +45,7 @@ export async function diagnoseGuildSetup(guild: Guild): Promise<SetupDiagnostics
     ["Staff applications channel", settings.governance?.staffApplicationChannelId],
     ["Collection announcements", settings.collectionAnnouncementChannelId],
     ["Server logs", settings.serverLogChannelId],
+    ["Reliability logs", settings.reliabilityLogChannelId],
     ["Reaction logs", settings.reactionLogChannelId],
     ["Statistics dashboard", settings.statsChannelId],
     ["Chronicles channel", settings.chronicleChannelId],

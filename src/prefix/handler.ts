@@ -14,6 +14,7 @@ import {
 } from "discord.js";
 import { commandMap } from "../commands/index.js";
 import { MODERATION_COMMAND_NAMES, hasRequiredModeratorRole, moderatorRoleRequirementText } from "../moderation/access.js";
+import { reportReliabilityError } from "../reliability/logger.js";
 
 const PREFIX = "?";
 
@@ -376,6 +377,7 @@ export async function handlePrefixMessage(message: Message): Promise<void> {
         return;
       }
       console.error(`Prefix command failed: ${commandName}`, error);
+      void reportReliabilityError(message.client, message.guildId, `Prefix command failed: ?${commandName}`, error, `User: ${message.author.tag} (${message.author.id})\nChannel: <#${message.channelId}>`);
       await message.reply("Grey Ghost lost that command in the fog. Please try again.");
     }
 }
@@ -384,6 +386,7 @@ export function registerPrefixCommands(client: Client): void {
   client.on(Events.MessageCreate, (message) => {
     void handlePrefixMessage(message).catch((error) => {
       console.error("Prefix command listener failed:", error);
+      if (message.guildId) void reportReliabilityError(client, message.guildId, "Prefix command listener failed", error, `User: ${message.author.tag} (${message.author.id})\nChannel: <#${message.channelId}>`);
     });
   });
 }

@@ -13,6 +13,7 @@ import {
 } from "discord.js";
 import { getGuildSettings, updateModmailTicket } from "../services/guild-settings.js";
 import { hasRequiredModeratorRole } from "../moderation/access.js";
+import { reportReliabilityError } from "../reliability/logger.js";
 import {
   MODMAIL_CATEGORIES,
   closeTicket,
@@ -156,6 +157,7 @@ export function registerModmailInteractions(client: Client): void {
       await deleteClosedTicket(interaction.guild, ticket, interaction.user.id);
     } catch (error) {
       console.error("Modmail interaction failed:", error);
+      void reportReliabilityError(client, interaction.guildId ?? undefined, "Ticket interaction failed", error, `Source: modmail interaction\nUser: ${interaction.user.tag} (${interaction.user.id})`);
       if (interaction.isRepliable()) {
         const payload = interaction.inGuild()
           ? { content: "Grey Ghost could not complete that modmail action. Please try again.", flags: MessageFlags.Ephemeral } as const

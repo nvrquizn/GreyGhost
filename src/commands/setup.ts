@@ -32,6 +32,7 @@ function settingsSummary(settings: GuildSettings): string {
     `**Governance:** ${settings.governance ? `petitions <#${settings.governance.petitionChannelId}> · council <#${settings.governance.councilChannelId}> · voters <@&${settings.governance.councilRoleId}> · applications <#${settings.governance.staffApplicationChannelId}>` : "Not configured"}`,
     `**Collection announcements:** ${settings.collectionAnnouncementChannelId ? `<#${settings.collectionAnnouncementChannelId}>` : "Not configured"}`,
     `**Server logs:** ${settings.serverLogChannelId ? `<#${settings.serverLogChannelId}>` : "Not configured"}`,
+    `**Reliability logs:** ${settings.reliabilityLogChannelId ? `<#${settings.reliabilityLogChannelId}>` : "Not configured"}`,
     `**Reaction logs:** ${settings.reactionLogChannelId ? `<#${settings.reactionLogChannelId}>` : "Not configured"}`,
     `**Chronicles:** ${settings.chronicleChannelId ? `<#${settings.chronicleChannelId}>` : "Not configured"}`,
     `**Moderator role:** ${settings.moderatorRoleId ? `<@&${settings.moderatorRoleId}>` : "Not configured"}`,
@@ -170,6 +171,18 @@ export const setupCommand: Command = {
     )
     .addSubcommand((subcommand) =>
       subcommand
+        .setName("reliability-logs")
+        .setDescription("Choose where Grey Ghost reports command errors and automatic recovery activity.")
+        .addChannelOption((option) =>
+          option
+            .setName("channel")
+            .setDescription("The private channel for reliability and error reports.")
+            .addChannelTypes(ChannelType.GuildText)
+            .setRequired(true),
+        ),
+    )
+    .addSubcommand((subcommand) =>
+      subcommand
         .setName("reaction-logs")
         .setDescription("Choose a separate channel for added and removed reactions.")
         .addChannelOption((option) =>
@@ -286,6 +299,7 @@ export const setupCommand: Command = {
               { name: "Modmail", value: "modmail" },
               { name: "Moderation records", value: "moderation" },
               { name: "Server logs", value: "serverLogChannelId" },
+              { name: "Reliability logs", value: "reliabilityLogChannelId" },
               { name: "Reaction logs", value: "reactionLogChannelId" },
               { name: "Chronicles channel", value: "chronicleChannelId" },
               { name: "Moderator role", value: "moderatorRoleId" },
@@ -600,6 +614,18 @@ ${settingsSummary(settings)}`, flags: MessageFlags.Ephemeral });
       });
       await interaction.reply({
         content: `Server activity—including member, invite, message, channel, permission, thread, role, and ghost-ping events—will now be recorded in ${channel}.\n\n${settingsSummary(settings)}`,
+        flags: MessageFlags.Ephemeral,
+      });
+      return;
+    }
+
+    if (subcommand === "reliability-logs") {
+      const channel = interaction.options.getChannel("channel", true);
+      const settings = await updateGuildSettings(interaction.guildId, {
+        reliabilityLogChannelId: channel.id,
+      });
+      await interaction.reply({
+        content: `Grey Ghost will report command failures, runtime errors, and persistent-message recovery activity in ${channel}.\n\n${settingsSummary(settings)}`,
         flags: MessageFlags.Ephemeral,
       });
       return;

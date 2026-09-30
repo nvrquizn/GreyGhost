@@ -7,6 +7,7 @@ import {
   type GuildTextBasedChannel,
 } from "discord.js";
 import type { Command } from "../types/command.js";
+import { suppressPersistentDeletion } from "../reliability/suppression.js";
 import { getGuildSettings, removeStickyMessage, saveStickyMessage } from "../services/guild-settings.js";
 
 async function sendSticky(channel: GuildTextBasedChannel, content: string) {
@@ -52,6 +53,7 @@ export const stickyCommand: Command = {
       const settings = await getGuildSettings(interaction.guildId);
       const previous = settings.stickyMessages?.[channel.id];
       if (previous?.messageId) {
+        suppressPersistentDeletion(previous.messageId);
         await channel.messages.fetch(previous.messageId).then((message) => message.delete()).catch(() => undefined);
       }
       const sent = await sendSticky(channel, content);
@@ -74,6 +76,7 @@ export const stickyCommand: Command = {
         return;
       }
       if (sticky.messageId) {
+        suppressPersistentDeletion(sticky.messageId);
         await channel.messages.fetch(sticky.messageId).then((message) => message.delete()).catch(() => undefined);
       }
       await removeStickyMessage(interaction.guildId, channel.id);

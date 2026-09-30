@@ -32,6 +32,8 @@ import { registerHelpInteractions } from "./help/runtime.js";
 import { registerStickyRuntime } from "./sticky/runtime.js";
 import { registerLevelRuntime } from "./levels/runtime.js";
 import { MODERATION_COMMAND_NAMES, hasRequiredModeratorRole, moderatorRoleRequirementText } from "./moderation/access.js";
+import { registerReliabilityRecovery } from "./reliability/recovery.js";
+import { reportGlobalReliabilityError, reportReliabilityError } from "./reliability/logger.js";
 
 const client = new Client({
   intents: [
@@ -68,6 +70,7 @@ registerDragonRuntime(client);
 registerHelpInteractions(client);
 registerStickyRuntime(client);
 registerLevelRuntime(client);
+registerReliabilityRecovery(client);
 
 client.once(Events.ClientReady, (readyClient) => {
   readyClient.user.setActivity("the mists of Dragonstone", {
@@ -85,6 +88,7 @@ client.on(Events.InteractionCreate, async (interaction) => {
       await command.autocomplete(interaction);
     } catch (error) {
       console.error(`Autocomplete failed: ${interaction.commandName}`, error);
+      void reportReliabilityError(client, interaction.guildId ?? undefined, `Autocomplete failed: /${interaction.commandName}`, error, `User: ${interaction.user.tag} (${interaction.user.id})`);
       if (!interaction.responded) await interaction.respond([]);
     }
     return;
@@ -116,6 +120,7 @@ client.on(Events.InteractionCreate, async (interaction) => {
     await command.execute(interaction);
   } catch (error) {
     console.error(`Command failed: ${interaction.commandName}`, error);
+    void reportReliabilityError(client, interaction.guildId ?? undefined, `Command failed: /${interaction.commandName}`, error, `User: ${interaction.user.tag} (${interaction.user.id})\nChannel: ${interaction.channelId ? `<#${interaction.channelId}>` : "Unknown"}`);
 
     const response = {
       content: "Grey Ghost lost that command in the fog. Please try again.",
@@ -132,6 +137,12 @@ client.on(Events.InteractionCreate, async (interaction) => {
 
 client.on(Events.Error, (error) => {
   console.error("Discord client error:", error);
+  void reportGlobalReliabilityError(client, "Discord client error", error, "Source: Discord client");
+});
+
+process.on("unhandledRejection", (error) => {
+  console.error("Unhandled promise rejection:", error);
+  void reportGlobalReliabilityError(client, "Unhandled promise rejection", error, "Source: process.unhandledRejection");
 });
 
 await client.login(config.DISCORD_TOKEN);

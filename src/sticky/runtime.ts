@@ -1,5 +1,6 @@
 import { Events, type Client, type GuildTextBasedChannel, type Message } from "discord.js";
 import { getGuildSettings, saveStickyMessage } from "../services/guild-settings.js";
+import { suppressPersistentDeletion } from "../reliability/suppression.js";
 
 const channelQueues = new Map<string, Promise<void>>();
 
@@ -12,6 +13,7 @@ async function refreshSticky(message: Message<true>): Promise<void> {
   if (!channel.isTextBased() || channel.isThread()) return;
 
   if (sticky.messageId) {
+    suppressPersistentDeletion(sticky.messageId);
     await channel.messages.fetch(sticky.messageId).then((old) => old.delete()).catch(() => undefined);
   }
 
